@@ -1,0 +1,551 @@
+{
+  "counts": {
+    "leakage_prone": 4,
+    "requires_inspection": 29,
+    "total_features": 53,
+    "url_only": 20
+  },
+  "dataset": "PhiUSIIL Phishing URL (Website) Dataset",
+  "features": [
+    {
+      "available_from_url_only": true,
+      "definition": "Hostname extracted from the URL.",
+      "dtype": "string",
+      "leakage_risk": "identifier",
+      "model_input": false,
+      "name": "Domain",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Top-level domain of the URL.",
+      "dtype": "string",
+      "leakage_risk": "identifier",
+      "model_input": false,
+      "name": "TLD",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "HTML <title> of the page.",
+      "dtype": "string",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "Title",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Number of characters in the URL.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "URLLength",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Number of characters in the domain.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "DomainLength",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "1 when the domain is an IP literal.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "IsDomainIP",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Number of characters in the TLD.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "TLDLength",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Count of subdomain labels.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfSubDomain",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "1 when the URL uses obfuscation.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "HasObfuscation",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Count of obfuscated characters.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfObfuscatedChar",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Obfuscated characters divided by URL length.",
+      "dtype": "number",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "ObfuscationRatio",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Letter count in the URL.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfLettersInURL",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Letters divided by URL length.",
+      "dtype": "number",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "LetterRatioInURL",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Digit count in the URL (dataset spelling).",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfDegitsInURL",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Digits divided by URL length (dataset spelling).",
+      "dtype": "number",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "DegitRatioInURL",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Count of '=' characters.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfEqualsInURL",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Count of '?' characters.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfQMarkInURL",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Count of '&' characters.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfAmpersandInURL",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Count of other special characters.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfOtherSpecialCharsInURL",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "Special characters divided by URL length (dataset spelling).",
+      "dtype": "number",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "SpacialCharRatioInURL",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": true,
+      "definition": "1 when the URL scheme is https.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "IsHTTPS",
+      "required_input": "URL",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Similarity of the URL to a legitimate-URL corpus, 0-100.",
+      "dtype": "number",
+      "leakage_risk": "high",
+      "model_input": false,
+      "name": "URLSimilarityIndex",
+      "required_input": "corpus",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Rate of repeated character sequences in the URL.",
+      "dtype": "number",
+      "leakage_risk": "medium",
+      "model_input": true,
+      "name": "CharContinuationRate",
+      "required_input": "corpus",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "P(legitimate | TLD) statistic computed over a corpus.",
+      "dtype": "number",
+      "leakage_risk": "high",
+      "model_input": false,
+      "name": "TLDLegitimateProb",
+      "required_input": "corpus",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Character-probability score of the URL from a corpus model.",
+      "dtype": "number",
+      "leakage_risk": "high",
+      "model_input": false,
+      "name": "URLCharProb",
+      "required_input": "corpus",
+      "requires_controlled_webpage_inspection": false
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Lines in the page source.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "LineOfCode",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Length of the longest source line.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "LargestLineLength",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when the page has a <title>.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "HasTitle",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Match score between domain and page title.",
+      "dtype": "number",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "DomainTitleMatchScore",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Match score between URL and page title.",
+      "dtype": "number",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "URLTitleMatchScore",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when the page declares a favicon.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "HasFavicon",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when a robots directive is present.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "Robots",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when the page is responsive.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "IsResponsive",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Number of redirects observed while loading.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfURLRedirect",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Number of self-redirects.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfSelfRedirect",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when a meta description exists.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "HasDescription",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Count of popup/alert calls.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfPopup",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Count of iframes.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfiFrame",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when a form posts to another origin.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "HasExternalFormSubmit",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when social-network links are present.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "HasSocialNet",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when a submit button is present.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "HasSubmitButton",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when hidden form fields are present.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "HasHiddenFields",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when a password input is present.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "HasPasswordField",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when banking keywords appear.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "Bank",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when payment keywords appear.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "Pay",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when cryptocurrency keywords appear.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "Crypto",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "1 when a copyright notice is present.",
+      "dtype": "boolean",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "HasCopyrightInfo",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Count of images.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfImage",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Count of CSS references.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfCSS",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Count of JavaScript references.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfJS",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Count of same-origin references.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfSelfRef",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Count of empty references.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfEmptyRef",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    },
+    {
+      "available_from_url_only": false,
+      "definition": "Count of external references.",
+      "dtype": "integer",
+      "leakage_risk": "none",
+      "model_input": true,
+      "name": "NoOfExternalRef",
+      "required_input": "page",
+      "requires_controlled_webpage_inspection": true
+    }
+  ],
+  "identifiers_not_model_inputs": [
+    "FILENAME",
+    "URL",
+    "label"
+  ],
+  "label_map": {
+    "0": "phishing",
+    "1": "legitimate"
+  },
+  "source": "https://archive.ics.uci.edu/dataset/967/phiusiil+phishing+url+website+dataset"
+}

@@ -1,6 +1,6 @@
 # API contracts
 
-**Version: `2026-11-08.1`** · source of truth: `packages/contracts/schemas/*.schema.json`
+**Version: `2026-11-09.1`** · source of truth: `packages/contracts/schemas/*.schema.json`
 · Python mirror: `packages/contracts/src/phishguard_contracts/models.py`
 · TS mirror: `packages/contracts/src/types.ts`
 
@@ -17,7 +17,9 @@ validate against both the JSON Schema and the Pydantic model.
 | `POST` | `/api/reports` | web | authenticated | M8 |
 | `POST` | `/internal/analyze` | analysis | `X-Service-Token` | M1: validates, returns 501 |
 | `GET` | `/internal/config` | both | `X-Service-Token` | implemented |
-| `POST` | `/predict` | ml | `X-Service-Token` | M1: validates, returns 503 |
+| `GET` | `/model/info` | ml | none | **implemented (M2)** |
+| `POST` | `/predict` | ml | `X-Service-Token` | **implemented (M2)** |
+| `POST` | `/explain` | ml | `X-Service-Token` | **implemented (M2)** |
 | `GET` | `/health`, `/version` | both | none | implemented |
 
 ## Scan statuses
@@ -128,25 +130,50 @@ Three separate outputs, never collapsed:
              "request_id": "req_01HZX8K4T9" } }
 ```
 
-Codes: `invalid_url`, `blocked_target`, `rate_limited`, `not_found`,
-`unauthorized`, `payload_too_large`, `upstream_unavailable`, `timeout`, `internal`.
+Codes: `invalid_request`, `invalid_url`, `blocked_target`, `rate_limited`,
+`not_found`, `unauthorized`, `payload_too_large`, `upstream_unavailable`,
+`timeout`, `internal`.
+
+`invalid_request` = a structurally valid HTTP body that cannot be used
+(unknown feature name, non-numeric feature value, unknown enum value at a
+non-schema layer). It is distinct from `invalid_url`, which is a URL-policy
+rejection.
 
 `request_id` is echoed in the `X-Request-ID` response header.
 
 ## ML contracts
 
-`POST /predict`:
+`GET /model/info` returns the served model metadata, the full ordered
+`feature_contract`, the tuned threshold and the missing-feature policy. It does
+not return a prediction.
+
+`POST /predict` and `POST /explain` share the same request and response shape;
+`/explain` always fills `contributions`:
 
 ```json
-{ "features": { "URLLength": 41 }, "explain": true, "model_version": null }
+{ "features": { "URLLength": 41, "IsHTTPS": 1 }, "explain": true,
+  "model_version": null }
 → { "label": "phishing", "probability_phishing": 0.91,
     "contributions": [ { "feature": "URLLength", "value": 41, "shap": 0.12 } ],
-    "missing_features": [], "status": "ok", "model": { "name": "...", "version": "1.0.0",
-    "feature_contract_version": "1" } }
+    "missing_features": [], "status": "ok",
+    "model": { "name": "phiusiil-xgboost", "version": "1.0.0",
+               "feature_contract_version": "2", "label_map": { "0": "phishing", "1": "legitimate" } } }
 ```
 
-`status` is `ok | partial | unknown`. `partial` means some features were
-unavailable and confidence is reduced. `unknown` means no usable prediction.
+- `status`: `ok | partial | unknown`.
+  - `ok` — every contract feature was supplied.
+  - `partial` — up to 25% were missing; training medians were used and every
+    imputed name is listed in `missing_features`.
+  - `unknown` — more than 25% missing; `label` is `"unknown"`. The probability
+    is still returned because the field is required, but it is not a verdict.
+- Contributions are SHAP values in the model margin space and are ordered by
+  absolute value. They explain the score; they are not a probability
+  decomposition and not causal.
+- `503 upstream_unavailable` means the artifact set is absent or unreadable. The
+  service never fabricates a probability.
+
+`FEATURE_SCHEMA_VERSION` and `CONTRACT_VERSION` are exported by
+`packages/contracts` and reported by `/health` and `/version`.
 
 ## Community reports
 

@@ -17,14 +17,14 @@ def test_health_reports_ok_and_versions() -> None:
     assert body["status"] == "ok"
     assert body["service"] == "analysis"
     assert body["version"] == "0.1.0"
-    assert body["contract_version"] == "2026-11-08.1"
+    assert body["contract_version"] == "2026-11-09.1"
     assert body["checks"]["config"] == "ok"
 
 
 def test_version_endpoint_exposes_feature_schema_version() -> None:
     response = _client().get("/version")
     assert response.status_code == 200
-    assert response.json()["feature_schema_version"] == "1"
+    assert response.json()["feature_schema_version"] == "2"
 
 
 def test_request_id_is_echoed() -> None:

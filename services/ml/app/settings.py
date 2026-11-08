@@ -28,6 +28,7 @@ class Settings:
     env: str
     log_level: str
     service_token: str
+    artifacts_dir: Path
     model_path: Path
     feature_contract_path: Path
     require_model: bool
@@ -54,11 +55,16 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     if environment == "production" and weak_token:
         problems.append("ML_SERVICE_TOKEN must be set to a strong value in production")
 
-    model_path = Path(source.get("MODEL_PATH", "artifacts/model.joblib"))
-    contract_path = Path(source.get("FEATURE_CONTRACT_PATH", "artifacts/feature_contract.json"))
+    artifacts_dir = Path(source.get("ARTIFACTS_DIR", "artifacts"))
+    model_path = Path(source.get("MODEL_PATH", str(artifacts_dir / "model.joblib")))
+    contract_path = Path(
+        source.get("FEATURE_CONTRACT_PATH", str(artifacts_dir / "feature_contract.json"))
+    )
     require_model = source.get("ML_REQUIRE_MODEL", "").strip() == "1"
-    if require_model and environment == "production" and not model_path.exists():
-        problems.append(f"MODEL_PATH does not exist: {model_path}")
+    if require_model and environment == "production":
+        for required in (model_path, contract_path, artifacts_dir / "selected.json"):
+            if not required.exists():
+                problems.append(f"required artifact does not exist: {required}")
 
     if problems:
         raise ConfigError(problems)
@@ -67,6 +73,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         env=environment,
         log_level=log_level,
         service_token=token,
+        artifacts_dir=artifacts_dir,
         model_path=model_path,
         feature_contract_path=contract_path,
         require_model=require_model,
@@ -77,8 +84,10 @@ def redacted_summary(settings: Settings) -> dict[str, object]:
     return {
         "env": settings.env,
         "log_level": settings.log_level,
+        "artifacts_dir": str(settings.artifacts_dir),
         "model_path": str(settings.model_path),
         "model_present": settings.model_path.exists(),
         "feature_contract": str(settings.feature_contract_path),
         "feature_contract_present": settings.feature_contract_path.exists(),
+        "selected_present": (settings.artifacts_dir / "selected.json").exists(),
     }

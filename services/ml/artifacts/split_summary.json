@@ -1,0 +1,46 @@
+{
+  "ambiguous_domain_rows_removed": 1372,
+  "ambiguous_domains_removed": 120,
+  "assignment_domain_counts": {
+    "test": 27484,
+    "train": 123083,
+    "validation": 24822
+  },
+  "assignment_sha256": "d155592404622e4de879b9b0881d6d0a0ae231f0fd690d8afebcaa48d985ec1e",
+  "duplicate_url_rows_removed": 425,
+  "fractions": {
+    "test": 0.15,
+    "train": 0.7,
+    "validation": 0.15
+  },
+  "grouping_key": "registrable_domain (tldextract, offline snapshot)",
+  "input_rows": 235795,
+  "rows_after_url_deduplication": 235370,
+  "seed": 42,
+  "splits": {
+    "test": {
+      "class_counts": {
+        "0_phishing": 14899,
+        "1_legitimate": 20200
+      },
+      "domains": 27484,
+      "rows": 35099
+    },
+    "train": {
+      "class_counts": {
+        "0_phishing": 72073,
+        "1_legitimate": 94270
+      },
+      "domains": 123083,
+      "rows": 166343
+    },
+    "validation": {
+      "class_counts": {
+        "0_phishing": 12355,
+        "1_legitimate": 20201
+      },
+      "domains": 24822,
+      "rows": 32556
+    }
+  }
+}

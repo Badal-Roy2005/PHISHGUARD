@@ -1,0 +1,78 @@
+{
+  "importance": [
+    {
+      "feature": "IsHTTPS",
+      "mean_abs_shap": 3.8314712047576904
+    },
+    {
+      "feature": "DomainLength",
+      "mean_abs_shap": 3.446288585662842
+    },
+    {
+      "feature": "LetterRatioInURL",
+      "mean_abs_shap": 2.3364548683166504
+    },
+    {
+      "feature": "URLLength",
+      "mean_abs_shap": 1.9132630825042725
+    },
+    {
+      "feature": "NoOfOtherSpecialCharsInURL",
+      "mean_abs_shap": 1.6943011283874512
+    },
+    {
+      "feature": "NoOfDegitsInURL",
+      "mean_abs_shap": 0.507850170135498
+    },
+    {
+      "feature": "NoOfLettersInURL",
+      "mean_abs_shap": 0.48811477422714233
+    },
+    {
+      "feature": "DegitRatioInURL",
+      "mean_abs_shap": 0.43105757236480713
+    },
+    {
+      "feature": "NoOfSubDomain",
+      "mean_abs_shap": 0.3847338557243347
+    },
+    {
+      "feature": "SpacialCharRatioInURL",
+      "mean_abs_shap": 0.3497639000415802
+    },
+    {
+      "feature": "TLDLength",
+      "mean_abs_shap": 0.16700167953968048
+    },
+    {
+      "feature": "NoOfObfuscatedChar",
+      "mean_abs_shap": 0.0
+    },
+    {
+      "feature": "ObfuscationRatio",
+      "mean_abs_shap": 0.0
+    },
+    {
+      "feature": "NoOfEqualsInURL",
+      "mean_abs_shap": 0.0
+    },
+    {
+      "feature": "HasObfuscation",
+      "mean_abs_shap": 0.0
+    },
+    {
+      "feature": "IsDomainIP",
+      "mean_abs_shap": 0.0
+    },
+    {
+      "feature": "NoOfAmpersandInURL",
+      "mean_abs_shap": 0.0
+    },
+    {
+      "feature": "NoOfQMarkInURL",
+      "mean_abs_shap": 0.0
+    }
+  ],
+  "method": "tree",
+  "sample_rows": 1000
+}

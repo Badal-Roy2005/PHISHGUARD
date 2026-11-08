@@ -1,0 +1,28 @@
+{
+  "class_counts": {
+    "0_phishing": 100945,
+    "1_legitimate": 134850
+  },
+  "columns": 56,
+  "domains_with_both_labels": 120,
+  "domains_with_multiple_rows": 6013,
+  "duplicate_url_rows": 850,
+  "duplicate_urls": 425,
+  "duplicate_urls_with_conflicting_labels": 0,
+  "exact_duplicate_rows": 0,
+  "max_rows_per_domain": 5754,
+  "missing_by_column": {},
+  "missing_values": 0,
+  "non_numeric_columns": [
+    "FILENAME",
+    "URL",
+    "Domain",
+    "TLD",
+    "Title",
+    "label"
+  ],
+  "numeric_columns": 50,
+  "registrable_domains": 175509,
+  "rows": 235795,
+  "rows_in_ambiguous_domains": 1374
+}

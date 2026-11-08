@@ -58,6 +58,7 @@
     "ErrorCode": {
       "type": "string",
       "enum": [
+        "invalid_request",
         "invalid_url",
         "blocked_target",
         "rate_limited",

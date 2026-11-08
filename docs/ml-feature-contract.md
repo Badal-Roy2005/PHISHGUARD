@@ -1,81 +1,139 @@
 # ML feature contract
 
-Status: **schema frozen, feature list captured from the real dataset, model not
-trained.** M2 finalizes `artifacts/feature_contract.json`.
+Status: **implemented in M2**. Source of truth for wire shape is
+`packages/contracts`; the generated manifest is
+`services/ml/artifacts/feature_manifest.json` and the served contract is
+`services/ml/artifacts/feature_contract.json`.
 
-## Dataset facts (verified from the CSV on disk)
+- `FEATURE_SCHEMA_VERSION = "2"`
+- `MODEL_VERSION = "1.0.0"`
+- Model artifact: `phiusiil-xgboost` (URL-only `live` feature set)
 
-- File: `PhiUSIIL_Phishing_URL_Dataset.csv` (54.2 MB, repository root, gitignored)
-- Rows: **235,795** data rows
-- Columns: **56** = `FILENAME`, `URL`, **53 numeric/derived features**, `label`
-- Class balance (from the project brief): 134,850 legitimate / 100,945 phishing
+## Dataset facts (measured from the CSV on disk)
+
+- File: `PhiUSIIL_Phishing_URL_Dataset.csv` (repository root, gitignored)
+- Rows: **235,795**; columns: **56**
+- Columns: `FILENAME`, `URL`, `Domain`, `TLD`, `Title`, **50 numeric features**,
+  `label`
+- Missing values: **0**
+- Exact duplicate rows: **0**
+- Duplicate URLs: **425** (no conflicting labels)
+- Registrable domains: **175,509**; **120** carry both labels (1,374 rows)
+- Class counts: **100,945 phishing / 134,850 legitimate**
 - `label`: **`0 = phishing`, `1 = legitimate`** — inverted from intuition.
-  Asserted in code (`LABEL_MAP`) and in tests.
+  Pinned in `LABEL_MAP` and asserted in tests.
 
-## The contract problem this dataset creates
+The model target is explicit: `y = 1` when the dataset label is `0`, so class 1
+is always phishing. `predict_proba[:, 1]` is therefore the phishing probability.
 
-Only ~20 of the 53 features are derivable from the URL string alone. About 29 are
-**page-content** features that require fetching and parsing the page
-(`LineOfCode`, `HasTitle`, `NoOfPopup`, `NoOfiFrame`, `HasPasswordField`, …).
-A model trained on all 53 therefore cannot be fully served at scan time without a
-content extractor.
+## Why two feature sets
 
-**Decision to validate in M2:** train and report two models.
+Of the 50 numeric columns, 46 are usable model inputs. Four are
+corpus-derived statistics that leak dataset provenance and are excluded from
+**every** model:
 
-1. `full` — all 53 features, research metrics. Cannot serve live without a fetch
-   and a DOM extractor.
-2. `live` — URL-derivable + safe derived features only. This is the model the ML
-   service serves, so `status` stays `ok` instead of `partial`.
+`URLSimilarityIndex`, `CharContinuationRate`, `TLDLegitimateProb`, `URLCharProb`.
 
-Never silently impute the missing content features at inference.
+| Set | Features | Purpose |
+|---|---|---|
+| `full_offline` | 46 | Research/reporting comparison. Includes page-content features, so it is **not served**. |
+| `live` | 18 | Served model. Every feature is derivable from the URL string alone. |
 
-## Proposed `live_source` classification
+Identifiers/non-numeric columns are never inputs: `FILENAME`, `URL`, `Domain`,
+`TLD`, `Title`, `label`.
 
-| Source | Features |
+### `live` (served, 18 features)
+
+`URLLength`, `DomainLength`, `IsDomainIP`, `TLDLength`, `NoOfSubDomain`,
+`HasObfuscation`, `NoOfObfuscatedChar`, `ObfuscationRatio`, `NoOfLettersInURL`,
+`LetterRatioInURL`, `NoOfDegitsInURL`, `DegitRatioInURL`, `NoOfEqualsInURL`,
+`NoOfQMarkInURL`, `NoOfAmpersandInURL`, `NoOfOtherSpecialCharsInURL`,
+`SpacialCharRatioInURL`, `IsHTTPS`.
+
+All 18 have `available_from_url_only: true`, `requires_controlled_webpage_inspection:
+false`, `live_source: "url"`, `required: true` and `default_policy: "unknown"`.
+
+### `full_offline` (not served, 46 features)
+
+The `live` set plus 28 page-content features (`LineOfCode`, `HasTitle`,
+`HasPasswordField`, `NoOfiFrame`, `NoOfPopup`, `Bank`, `Pay`, `Crypto`,
+`NoOfImage`, `NoOfCSS`, `NoOfJS`, `NoOfExternalRef`, …). They require controlled
+inspection and are deliberately excluded from the served contract.
+
+## Missing-feature policy
+
+The ML service never invents a measurement:
+
+| Missing | `status` | `label` | Behaviour |
+|---|---|---|---|
+| 0% | `ok` | predicted | no imputation |
+| ≤ 25% | `partial` | predicted | training-median imputation; every imputed name returned in `missing_features` |
+| > 25% | `unknown` | `"unknown"` | probability still returned for wire compatibility, explicitly not a verdict |
+
+Unknown feature names and non-numeric/non-finite values are rejected with
+`400 invalid_request`. They are not silently dropped.
+
+## Splitting and leakage
+
+1. Drop duplicate URLs (425 rows).
+2. Group by **registrable domain** (`tldextract`, offline snapshot).
+3. Drop domains that carry both labels (120 domains / 1,372 rows) — they cannot
+   be placed in one split without leaking the label.
+4. Deterministic, class-stratified 70/15/15 assignment by domain, seed `42`.
+
+Result: **166,343 train / 32,556 validation / 35,099 test** rows, with no
+registrable domain shared across splits. Assignment fingerprint:
+`d155592404622e4de879b9b0881d6d0a0ae231f0fd690d8afebcaa48d985ec1e`.
+
+The test split is never used for threshold tuning or model selection; both use
+validation only.
+
+## Measured metrics (held-out test split)
+
+Served model: `live` / XGBoost, threshold `0.545` (max validation phishing F1).
+
+| Metric | Validation | Test |
+|---|---|---|
+| Accuracy | 0.9983 | 0.9968 |
+| Phishing precision | 0.9995 | 0.9993 |
+| Phishing recall | 0.9960 | 0.9932 |
+| Phishing F1 | 0.9977 | 0.9963 |
+| ROC-AUC | 0.9987 | 0.9983 |
+| PR-AUC | 0.9989 | 0.9986 |
+
+All six runs are in `services/ml/artifacts/metrics.json` and `MODEL_CARD.md`.
+These are measured values on one split of one dataset, not production
+estimates. PhiUSIIL is highly separable; near-duplicate content across distinct
+registrable domains (for example shared IPFS gateways) remains a possible
+residual leakage source and has not been resolved.
+
+## Artifacts (written together, versioned together)
+
+| File | Contents |
 |---|---|
-| `url` (20) | `URLLength`, `Domain`, `DomainLength`, `IsDomainIP`, `TLD`, `TLDLength`, `NoOfSubDomain`, `HasObfuscation`, `NoOfObfuscatedChar`, `ObfuscationRatio`, `NoOfLettersInURL`, `LetterRatioInURL`, `NoOfDegitsInURL`, `DegitRatioInURL`, `NoOfEqualsInURL`, `NoOfQMarkInURL`, `NoOfAmpersandInURL`, `NoOfOtherSpecialCharsInURL`, `SpacialCharRatioInURL`, `IsHTTPS` |
-| `derived` (4) | `URLSimilarityIndex`, `CharContinuationRate`, `TLDLegitimateProb`, `URLCharProb` (computed from dataset/corpus statistics; must be versioned with the model) |
-| `http` / content (29) | `LineOfCode`, `LargestLineLength`, `HasTitle`, `Title`, `DomainTitleMatchScore`, `URLTitleMatchScore`, `HasFavicon`, `Robots`, `IsResponsive`, `NoOfURLRedirect`, `NoOfSelfRedirect`, `HasDescription`, `NoOfPopup`, `NoOfiFrame`, `HasExternalFormSubmit`, `HasSocialNet`, `HasSubmitButton`, `HasHiddenFields`, `HasPasswordField`, `Bank`, `Pay`, `Crypto`, `HasCopyrightInfo`, `NoOfImage`, `NoOfCSS`, `NoOfJS`, `NoOfSelfRef`, `NoOfEmptyRef`, `NoOfExternalRef` |
+| `model.joblib` | fitted pipeline (imputer + estimator) |
+| `preprocessor.joblib` | fitted transform only |
+| `feature_contract.json` | served contract, 18 ordered features |
+| `feature_manifest.json` | all 53 documented features + availability flags |
+| `selected.json` | served metadata, threshold, feature order |
+| `metrics.json` | all six runs, validation and test metrics |
+| `MODEL_CARD.md` | generated summary of the served model |
+| `checksums.json` | SHA-256 for the contract, manifest and model files |
+| `dataset_audit.json` | raw audit before any row is removed |
+| `split_summary.json` | counts + assignment fingerprint |
+| `shap_global.json` | mean absolute SHAP for the served model |
 
-Identifiers, never model inputs: `FILENAME`, `URL`, `label`.
+The dataset CSV and `*.joblib` artifacts are gitignored; JSON metrics, the
+manifest, the model card and checksums are tracked.
 
-## Contract file shape
+## Reproduce
 
-```jsonc
-{
-  "version": "1",
-  "model_version": "1.0.0",
-  "dataset": { "name": "PhiUSIIL", "rows": 235795, "feature_count": 53,
-               "class_counts": { "0_phishing": 100945, "1_legitimate": 134850 } },
-  "label_map": { "0": "phishing", "1": "legitimate" },
-  "features": [
-    { "name": "URLLength", "dataset_column": "URLLength", "dtype": "integer",
-      "required": true, "live_source": "url", "default_policy": "reject" }
-  ]
-}
+```bash
+cd services/ml
+uv run python -m training.train       # reads the CSV at the repo root
+uv run pytest
 ```
 
-`default_policy`:
-
-- `reject` — prediction cannot proceed without it (URL-derivable core features).
-- `unknown` — proceed, return `status: "partial"`, reduce confidence.
-- `neutral` — no signal either way; never treated as evidence of safety.
-
-## Training rules
-
-1. Leakage audit **before** splitting: exact duplicates, normalized-URL duplicates,
-   cross-class registrable-domain overlap.
-2. Stratified 70/15/15 with a fixed seed; the test split is never used for tuning.
-3. Report accuracy, precision, recall, F1, ROC-AUC, PR-AUC — measured, not target.
-4. SHAP (`TreeExplainer`) for the deployed model; persist top-k contributions.
-5. Persist `model.joblib`, `preprocessor.joblib`, `feature_contract.json`,
-   `metrics.json`, `MODEL_CARD.md`, `manifest.json` (SHA-256) together.
-6. A model without its preprocessing object and contract version is invalid.
-
-## Assertions that must exist in code
-
-- `LABEL_MAP["0"] == "phishing"` and `LABEL_MAP["1"] == "legitimate"`.
-- Observed class counts match the dataset metadata within tolerance.
-- Same input → same probability (no nondeterminism in serving).
-- Missing required feature → `status != "ok"`, never a silent `0`.
-- SHAP contributions sum approximately to the model margin (tolerance-tested).
+Training is deterministic for a fixed seed. Random Forest predictions may differ
+in the last floating-point bit because of `n_jobs=-1`; the decision threshold and
+all reported metrics are identical.

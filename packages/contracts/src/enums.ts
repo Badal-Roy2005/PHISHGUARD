@@ -25,6 +25,7 @@ export const ENGINE_NAMES = ["ml", "url", "tls", "http", "intel", "community"] a
 export type EngineName = (typeof ENGINE_NAMES)[number];
 
 export const ERROR_CODES = [
+  "invalid_request",
   "invalid_url",
   "blocked_target",
   "rate_limited",

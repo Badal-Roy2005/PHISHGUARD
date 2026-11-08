@@ -28,6 +28,8 @@ data/
 *.csv
 artifacts/*.joblib
 artifacts/*.pkl
+**/artifacts/**/*.joblib
+**/artifacts/**/*.pkl
 
 # os / editor
 .DS_Store

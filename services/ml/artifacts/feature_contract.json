@@ -1,0 +1,181 @@
+{
+  "dataset": {
+    "class_counts": {
+      "0_phishing": 100945,
+      "1_legitimate": 134850
+    },
+    "feature_count": 18,
+    "name": "PhiUSIIL Phishing URL (Website) Dataset",
+    "rows": 233998
+  },
+  "features": [
+    {
+      "dataset_column": "URLLength",
+      "default_policy": "unknown",
+      "dtype": "integer",
+      "live_source": "url",
+      "name": "URLLength",
+      "notes": "Number of characters in the URL.",
+      "required": true
+    },
+    {
+      "dataset_column": "DomainLength",
+      "default_policy": "unknown",
+      "dtype": "integer",
+      "live_source": "url",
+      "name": "DomainLength",
+      "notes": "Number of characters in the domain.",
+      "required": true
+    },
+    {
+      "dataset_column": "IsDomainIP",
+      "default_policy": "unknown",
+      "dtype": "boolean",
+      "live_source": "url",
+      "name": "IsDomainIP",
+      "notes": "1 when the domain is an IP literal.",
+      "required": true
+    },
+    {
+      "dataset_column": "TLDLength",
+      "default_policy": "unknown",
+      "dtype": "integer",
+      "live_source": "url",
+      "name": "TLDLength",
+      "notes": "Number of characters in the TLD.",
+      "required": true
+    },
+    {
+      "dataset_column": "NoOfSubDomain",
+      "default_policy": "unknown",
+      "dtype": "integer",
+      "live_source": "url",
+      "name": "NoOfSubDomain",
+      "notes": "Count of subdomain labels.",
+      "required": true
+    },
+    {
+      "dataset_column": "HasObfuscation",
+      "default_policy": "unknown",
+      "dtype": "boolean",
+      "live_source": "url",
+      "name": "HasObfuscation",
+      "notes": "1 when the URL uses obfuscation.",
+      "required": true
+    },
+    {
+      "dataset_column": "NoOfObfuscatedChar",
+      "default_policy": "unknown",
+      "dtype": "integer",
+      "live_source": "url",
+      "name": "NoOfObfuscatedChar",
+      "notes": "Count of obfuscated characters.",
+      "required": true
+    },
+    {
+      "dataset_column": "ObfuscationRatio",
+      "default_policy": "unknown",
+      "dtype": "number",
+      "live_source": "url",
+      "name": "ObfuscationRatio",
+      "notes": "Obfuscated characters divided by URL length.",
+      "required": true
+    },
+    {
+      "dataset_column": "NoOfLettersInURL",
+      "default_policy": "unknown",
+      "dtype": "integer",
+      "live_source": "url",
+      "name": "NoOfLettersInURL",
+      "notes": "Letter count in the URL.",
+      "required": true
+    },
+    {
+      "dataset_column": "LetterRatioInURL",
+      "default_policy": "unknown",
+      "dtype": "number",
+      "live_source": "url",
+      "name": "LetterRatioInURL",
+      "notes": "Letters divided by URL length.",
+      "required": true
+    },
+    {
+      "dataset_column": "NoOfDegitsInURL",
+      "default_policy": "unknown",
+      "dtype": "integer",
+      "live_source": "url",
+      "name": "NoOfDegitsInURL",
+      "notes": "Digit count in the URL (dataset spelling).",
+      "required": true
+    },
+    {
+      "dataset_column": "DegitRatioInURL",
+      "default_policy": "unknown",
+      "dtype": "number",
+      "live_source": "url",
+      "name": "DegitRatioInURL",
+      "notes": "Digits divided by URL length (dataset spelling).",
+      "required": true
+    },
+    {
+      "dataset_column": "NoOfEqualsInURL",
+      "default_policy": "unknown",
+      "dtype": "integer",
+      "live_source": "url",
+      "name": "NoOfEqualsInURL",
+      "notes": "Count of '=' characters.",
+      "required": true
+    },
+    {
+      "dataset_column": "NoOfQMarkInURL",
+      "default_policy": "unknown",
+      "dtype": "integer",
+      "live_source": "url",
+      "name": "NoOfQMarkInURL",
+      "notes": "Count of '?' characters.",
+      "required": true
+    },
+    {
+      "dataset_column": "NoOfAmpersandInURL",
+      "default_policy": "unknown",
+      "dtype": "integer",
+      "live_source": "url",
+      "name": "NoOfAmpersandInURL",
+      "notes": "Count of '&' characters.",
+      "required": true
+    },
+    {
+      "dataset_column": "NoOfOtherSpecialCharsInURL",
+      "default_policy": "unknown",
+      "dtype": "integer",
+      "live_source": "url",
+      "name": "NoOfOtherSpecialCharsInURL",
+      "notes": "Count of other special characters.",
+      "required": true
+    },
+    {
+      "dataset_column": "SpacialCharRatioInURL",
+      "default_policy": "unknown",
+      "dtype": "number",
+      "live_source": "url",
+      "name": "SpacialCharRatioInURL",
+      "notes": "Special characters divided by URL length (dataset spelling).",
+      "required": true
+    },
+    {
+      "dataset_column": "IsHTTPS",
+      "default_policy": "unknown",
+      "dtype": "boolean",
+      "live_source": "url",
+      "name": "IsHTTPS",
+      "notes": "1 when the URL scheme is https.",
+      "required": true
+    }
+  ],
+  "label_map": {
+    "0": "phishing",
+    "1": "legitimate"
+  },
+  "model_version": "1.0.0",
+  "version": "2"
+}
