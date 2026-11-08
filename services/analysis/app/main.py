@@ -27,6 +27,8 @@ from phishguard_contracts import (
 )
 from pydantic import BaseModel, Field
 
+from persistence import PersistenceError, build_scan_store, persist_scan
+
 from .orchestration import build_scan_result
 from .settings import ConfigError, Settings, load_settings, redacted_summary
 
@@ -139,11 +141,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return redacted_summary(resolved)
 
     @app.post("/internal/analyze", dependencies=[Depends(require_service_token)])
-    async def analyze(payload: ScanRequest) -> JSONResponse:
+    async def analyze(
+        payload: ScanRequest,
+        x_authenticated_user_id: str | None = Header(default=None),
+    ) -> JSONResponse:
         # The request is contract-validated before any engine runs. M6 executes
         # the URL, transport (TLS/HTTP) and threat-intelligence engines; the
         # result is explicitly `failed` because M7 risk aggregation is absent.
         result = await run_in_threadpool(build_scan_result, payload, resolved)
+
+        # Persist the assessment server-side using the service role. A
+        # persistence failure degrades gracefully: the scan result is still
+        # returned to the client and never treated as benign.
+        if x_authenticated_user_id is not None:
+            try:
+                store = build_scan_store(resolved)
+                if store is not None:
+                    persist_scan(
+                        store,
+                        result,
+                        user_id=x_authenticated_user_id,
+                        retention_days=resolved.scan_retention_days,
+                    )
+            except PersistenceError as exc:
+                logger.warning("scan persistence failed: %s", exc)
+
         return JSONResponse(status_code=200, content=result.model_dump(mode="json"))
 
     return app

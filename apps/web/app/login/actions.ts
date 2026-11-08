@@ -12,6 +12,16 @@ function loginRedirect(next: string, key: "error" | "message", value: string): n
   redirect(`/login?${params.toString()}`);
 }
 
+async function createClientOrRedirect(next: string) {
+  let supabase: Awaited<ReturnType<typeof createClient>>;
+  try {
+    supabase = await createClient();
+  } catch {
+    loginRedirect(next, "error", "Authentication is not configured.");
+  }
+  return supabase;
+}
+
 export async function signIn(formData: FormData): Promise<void> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -21,7 +31,7 @@ export async function signIn(formData: FormData): Promise<void> {
     loginRedirect(next, "error", "Enter a valid email and a password of at least 8 characters.");
   }
 
-  const supabase = await createClient();
+  const supabase = await createClientOrRedirect(next);
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     loginRedirect(next, "error", "Invalid email or password.");
@@ -50,7 +60,7 @@ export async function signUp(formData: FormData): Promise<void> {
     "http://localhost:3000";
   const emailRedirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
-  const supabase = await createClient();
+  const supabase = await createClientOrRedirect(next);
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
