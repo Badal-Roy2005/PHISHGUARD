@@ -68,7 +68,7 @@ class ScoreContribution(StrictModel):
 
 class LikelihoodScore(StrictModel):
     score: float = Field(ge=0, le=1)
-    band: Literal["low", "suspicious", "high", "critical"]
+    band: Literal["low", "guarded", "suspicious", "high", "critical"]
     contributions: list[ScoreContribution] = Field(default_factory=list)
 
 
@@ -81,6 +81,7 @@ class PosturePenalty(StrictModel):
 class PostureScore(StrictModel):
     score: float = Field(ge=0, le=100)
     grade: Literal["A", "B", "C", "D", "F", "unknown"]
+    status: EngineStatus
     penalties: list[PosturePenalty] = Field(default_factory=list)
 
 
@@ -88,15 +89,94 @@ class ConfidenceScore(StrictModel):
     score: float = Field(ge=0, le=1)
     engines_ok: int = Field(ge=0, le=6)
     engines_total: int = Field(ge=1, le=6)
+    covered_weight: int = Field(ge=0, le=100)
+    total_weight: int = Field(ge=1, le=100)
+    incomplete: bool
+    missing_evidence: list[str] = Field(default_factory=list, max_length=20)
     notes: list[str] = Field(default_factory=list, max_length=20)
+
+
+RiskFactorCategory = Literal["intel", "url", "brand", "redirect", "tls", "http", "ml"]
+RiskFactorStatus = Literal["applied", "evaluated", "no_match", "unavailable", "error"]
+
+
+class RiskFactor(StrictModel):
+    reason_code: str = Field(
+        min_length=1,
+        max_length=128,
+        pattern=r"^[a-z0-9_.:-]+$",
+    )
+    category: RiskFactorCategory
+    source: EngineName
+    observed: float | str | bool | None = None
+    contribution: int = Field(ge=0, le=100)
+    max_contribution: int = Field(ge=0, le=100)
+    direction: Literal["increases_risk", "decreases_risk", "informational"]
+    severity: Severity
+    explanation: str = Field(min_length=1, max_length=512)
+    evidence_ref: str | None = None
+    status: RiskFactorStatus
+
+
+class RiskWeights(StrictModel):
+    intel: int = Field(ge=0, le=100)
+    url: int = Field(ge=0, le=100)
+    brand: int = Field(ge=0, le=100)
+    redirect: int = Field(ge=0, le=100)
+    tls: int = Field(ge=0, le=100)
+    http: int = Field(ge=0, le=100)
+
+    @model_validator(mode="after")
+    def _weights_sum_to_100(self) -> RiskWeights:
+        if self.intel + self.url + self.brand + self.redirect + self.tls + self.http != 100:
+            raise ValueError("risk weights must sum to 100")
+        return self
+
+
+class RiskBandRange(StrictModel):
+    band: Literal["low", "guarded", "suspicious", "high"]
+    min_score: int = Field(ge=0, le=100)
+    max_score: int = Field(ge=0, le=100)
+
+    @model_validator(mode="after")
+    def _ordered_range(self) -> RiskBandRange:
+        if self.min_score > self.max_score:
+            raise ValueError("min_score must not exceed max_score")
+        return self
+
+
+class RiskPolicyMetadata(StrictModel):
+    version: str = Field(min_length=1, max_length=64)
+    calibrated: bool
+    weights: RiskWeights
+    bands: list[RiskBandRange] = Field(min_length=1, max_length=8)
+    min_coverage_for_score: float = Field(ge=0, le=1)
+    min_coverage_for_low: float = Field(ge=0, le=1)
+    notes: list[str] = Field(default_factory=list, max_length=20)
+
+
+class ModelProbability(StrictModel):
+    probability_phishing: float = Field(ge=0, le=1)
+    label: Literal["phishing", "legitimate", "unknown"]
+    status: Literal["ok", "partial", "unknown"]
+    model_version: str | None = Field(default=None, max_length=64)
+    calibrated: bool
+    used_in_risk_score: Literal[False] = False
+    source: str = Field(min_length=1, max_length=256)
 
 
 class RiskAssessment(StrictModel):
     score: int | None = Field(default=None, ge=0, le=100)
     band: RiskBand
+    verdict: str = Field(min_length=1, max_length=512)
+    incomplete: bool
     likelihood: LikelihoodScore
     posture: PostureScore
     confidence: ConfidenceScore
+    factors: list[RiskFactor] = Field(default_factory=list, max_length=100)
+    reason_codes: list[str] = Field(default_factory=list, max_length=100)
+    model_probability: ModelProbability | None = None
+    policy: RiskPolicyMetadata
 
 
 class ExplanationFactor(StrictModel):

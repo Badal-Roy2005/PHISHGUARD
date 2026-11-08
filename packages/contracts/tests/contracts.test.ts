@@ -96,7 +96,7 @@ test("validates community report requests", () => {
 });
 
 test("contract versions and label map are pinned", () => {
-  assert.equal(CONTRACT_VERSION, "2026-11-09.1");
+  assert.equal(CONTRACT_VERSION, "2026-11-09.2");
   assert.equal(FEATURE_SCHEMA_VERSION, "2");
   assert.deepEqual(LABEL_MAP, { "0": "phishing", "1": "legitimate" });
   assert.deepEqual(SCAN_STATUSES, [

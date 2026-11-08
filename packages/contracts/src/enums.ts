@@ -14,6 +14,7 @@ export type Severity = (typeof SEVERITIES)[number];
 
 export const RISK_BANDS = [
   "low",
+  "guarded",
   "suspicious",
   "high",
   "critical",

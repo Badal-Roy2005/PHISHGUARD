@@ -15,9 +15,12 @@ and fails closed whenever destination safety cannot be established.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import http.client
 import json
 import logging
+import re
 import socket
 import ssl
 import time
@@ -34,7 +37,7 @@ from urllib.parse import urlparse
 
 ALLOWED_PROTOCOLS = {"http", "https"}
 
-DISALLOWED_PORTS = {25, 135, 445, 3389, 5900, 6000, 65533, 65534, 65535}
+ALLOWED_PORTS = {80, 443}
 
 MAX_REDIRECT_COUNT = 10
 
@@ -96,6 +99,7 @@ class ScanEvidence:
     http_status: int | None = None
     tls_information: dict[str, Any] | None = None
     response_headers: dict[str, str] | None = None
+    set_cookie_headers: list[str] | None = None
     html_title: str | None = None
     content_type: str | None = None
     scan_duration_ms: float = 0.0
@@ -118,11 +122,17 @@ class ScanResult:
 # DNS validation and rebinding protection
 # ---------------------------------------------------------------------------
 
-def is_rejected_address(address: str, network_type: str = "ipv4") -> bool:
+def is_rejected_address(
+    address: str,
+    network_type: str = "ipv4",
+    *,
+    allow_loopback: bool = False,
+) -> bool:
     """Check if an IP address falls in a rejected category.
 
     Explicitly blocks cloud metadata endpoints in addition to standard
-    private/reserved/loopback ranges.
+    private/reserved/loopback ranges. ``allow_loopback`` is a test-only escape
+    hatch and must never be enabled in production.
     """
     # Explicit cloud metadata check (regardless of ipaddress classification)
     if address in CLOUD_METADATA_IPS:
@@ -132,6 +142,9 @@ def is_rejected_address(address: str, network_type: str = "ipv4") -> bool:
         addr = ip_address(address)
     except ValueError:
         return True  # malformed, reject
+
+    if allow_loopback and addr.is_loopback:
+        return False
 
     if network_type == "ipv4":
         if addr.is_loopback:
@@ -166,6 +179,8 @@ def is_rejected_address(address: str, network_type: str = "ipv4") -> bool:
 def validate_dns_answers(
     hostname: str,
     resolved_ips: list[str],
+    *,
+    allow_loopback: bool = False,
 ) -> DNSResolutionEvidence:
     """Validate all DNS resolution answers against security policies.
 
@@ -176,7 +191,11 @@ def validate_dns_answers(
     resolved: list[str] = []
 
     for ip in resolved_ips:
-        if is_rejected_address(ip, "ipv4" if ":" not in ip else "ipv6"):
+        if is_rejected_address(
+            ip,
+            "ipv4" if ":" not in ip else "ipv6",
+            allow_loopback=allow_loopback,
+        ):
             rejected.append(ip)
         else:
             resolved.append(ip)
@@ -201,7 +220,16 @@ def validate_dns_answers(
 # URL validation and parsing (no network)
 # ---------------------------------------------------------------------------
 
-def validate_url_scheme(url: str) -> tuple[bool, str | None]:
+def validate_url_scheme(
+    url: str,
+    *,
+    allow_loopback: bool = False,
+) -> tuple[bool, str | None]:
+    """Validate scheme, host, credentials and port before any DNS or socket I/O.
+
+    ``allow_loopback`` is a test-only escape hatch that also permits a local
+    test server to use a non-standard port. Production settings refuse it.
+    """
     if not url or not isinstance(url, str):
         return False, "URL is empty or not a string"
 
@@ -210,6 +238,24 @@ def validate_url_scheme(url: str) -> tuple[bool, str | None]:
 
     if len(url) > 2048:
         return False, "URL exceeds maximum length of 2048 characters."
+
+    try:
+        parsed = urlparse(url)
+        if parsed.username or parsed.password:
+            return False, "URL must not contain credentials."
+        if not parsed.hostname:
+            return False, "URL has no hostname."
+        port = parsed.port
+    except ValueError:
+        return False, "URL contains an invalid port."
+
+    loopback_host = (parsed.hostname or "").lower() in {"localhost", "127.0.0.1", "::1"}
+    if (
+        port is not None
+        and port not in ALLOWED_PORTS
+        and not (allow_loopback and loopback_host)
+    ):
+        return False, f"Port {port} is not allowed. Only ports 80 and 443 are permitted."
 
     return True, None
 
@@ -227,6 +273,54 @@ def extract_url_components(url: str) -> dict[str, str]:
     }
 
 
+def _json_safe(value: Any) -> Any:
+    """Convert ssl certificate structures into JSON-serializable evidence."""
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, bytes):
+        return value.hex()
+    return value
+
+
+def build_tls_information(sock: Any, hostname: str, *, verified: bool = True) -> dict[str, Any]:
+    """Capture a bounded, serializable TLS summary from a connected socket."""
+    cipher = sock.cipher()
+    cipher_info: dict[str, Any] | None = None
+    if cipher:
+        cipher_info = {
+            "name": cipher[0],
+            "protocol": cipher[1],
+            "bits": cipher[2],
+        }
+
+    certificate = None
+    try:
+        certificate = _json_safe(sock.getpeercert())
+    except (ValueError, AttributeError):
+        certificate = None
+
+    return {
+        "enabled": True,
+        "verified": verified,
+        "protocol": sock.version(),
+        "cipher": cipher_info,
+        "alpn": sock.selected_alpn_protocol(),
+        "server_hostname": hostname,
+        "certificate": certificate,
+        "error": None,
+    }
+
+
+def _header_value(headers: dict[str, str], name: str) -> str | None:
+    target = name.lower()
+    for key, value in headers.items():
+        if key.lower() == target:
+            return value
+    return None
+
+
 # ---------------------------------------------------------------------------
 # DNS-to-connection binding (IP pinning)
 # ---------------------------------------------------------------------------
@@ -241,8 +335,9 @@ class PinnedDNSResolver:
     4. Preventing re-resolution during connection
     """
 
-    def __init__(self, hostname: str):
+    def __init__(self, hostname: str, *, allow_loopback: bool = False):
         self.hostname = hostname
+        self.allow_loopback = allow_loopback
         self._resolved_ips: list[str] = []
         self._validated_ips: list[str] = []
         self._validation_complete = False
@@ -261,7 +356,11 @@ class PinnedDNSResolver:
             )
 
         self._resolved_ips = [ip[4][0] for ip in addr_info]
-        evidence = validate_dns_answers(self.hostname, self._resolved_ips)
+        evidence = validate_dns_answers(
+            self.hostname,
+            self._resolved_ips,
+            allow_loopback=self.allow_loopback,
+        )
         self._validated_ips = evidence.resolved_addresses
         self._validation_complete = evidence.resolution_successful
 
@@ -336,31 +435,95 @@ class PinnedHTTPTransport:
         if not pinned_ip:
             raise urllib.error.URLError("No validated IP address available")
 
+        if port_int not in ALLOWED_PORTS:
+            try:
+                loopback_pinned = ip_address(pinned_ip).is_loopback
+            except ValueError:
+                loopback_pinned = False
+            if not (resolver.allow_loopback and loopback_pinned):
+                raise urllib.error.URLError(
+                    f"Port {port_int} is not allowed; only 80 and 443 are permitted"
+                )
+
         path = components["path"]
         query = components["query"]
         if query:
             path = f"{path}?{query}"
 
-        # Create socket connection to pinned IP (no DNS resolution)
-        sock = socket.create_connection(
-            (pinned_ip, port_int), timeout=self.timeout
-        )
+        request_start = time.monotonic()
+        sock: socket.socket | None = None
+        conn: http.client.HTTPConnection | None = None
 
         try:
+            # Create socket connection to pinned IP (no DNS resolution)
+            sock = socket.create_connection((pinned_ip, port_int), timeout=self.timeout)
+
+            tls_information: dict[str, Any] | None = None
             if scheme == "https":
                 ssl_ctx = self._create_ssl_context(hostname)
-                # Wrap socket with TLS using original hostname for SNI
-                # and certificate verification
-                wrapped_sock = ssl_ctx.wrap_socket(
-                    sock, server_hostname=hostname
-                )
-                conn = __import__("http.client").HTTPSConnection(
+                try:
+                    # SNI and certificate verification use the original hostname.
+                    wrapped_sock = ssl_ctx.wrap_socket(sock, server_hostname=hostname)
+                except ssl.SSLCertVerificationError as exc:
+                    message = str(exc)[:512]
+                    return {
+                        "success": False,
+                        "http_status": None,
+                        "final_url": url,
+                        "redirect_location": None,
+                        "content_type": None,
+                        "html_title": None,
+                        "response_headers": {},
+                        "set_cookie_headers": [],
+                        "body": b"",
+                        "tls_information": {
+                            "enabled": True,
+                            "verified": False,
+                            "protocol": None,
+                            "cipher": None,
+                            "alpn": None,
+                            "server_hostname": hostname,
+                            "certificate": None,
+                            "error": message,
+                        },
+                        "error": f"TLS certificate verification failed: {message}",
+                        "duration_ms": (time.monotonic() - request_start) * 1000,
+                    }
+                except ssl.SSLError as exc:
+                    message = str(exc)[:512]
+                    return {
+                        "success": False,
+                        "http_status": None,
+                        "final_url": url,
+                        "redirect_location": None,
+                        "content_type": None,
+                        "html_title": None,
+                        "response_headers": {},
+                        "set_cookie_headers": [],
+                        "body": b"",
+                        "tls_information": {
+                            "enabled": True,
+                            "verified": False,
+                            "protocol": None,
+                            "cipher": None,
+                            "alpn": None,
+                            "server_hostname": hostname,
+                            "certificate": None,
+                            "error": message,
+                        },
+                        "error": f"TLS handshake failed: {message}",
+                        "duration_ms": (time.monotonic() - request_start) * 1000,
+                    }
+
+                sock = wrapped_sock
+                tls_information = build_tls_information(wrapped_sock, hostname)
+                conn = http.client.HTTPSConnection(
                     hostname, port_int, timeout=self.timeout, context=ssl_ctx
                 )
-                # Replace the connection's socket with our pinned one
+                # Replace the connection's socket with our pinned one.
                 conn.sock = wrapped_sock
             else:
-                conn = __import__("http.client").HTTPConnection(
+                conn = http.client.HTTPConnection(
                     hostname, port_int, timeout=self.timeout
                 )
                 conn.sock = sock
@@ -382,10 +545,17 @@ class PinnedHTTPTransport:
                 body = body[: self.max_response_size]
 
             response_headers: dict[str, str] = {}
+            set_cookie_headers: list[str] = []
             for key, value in response.headers.items():
-                response_headers[key] = value
+                if key.lower() == "set-cookie":
+                    set_cookie_headers.append(value)
+                    continue
+                if key in response_headers:
+                    response_headers[key] = f"{response_headers[key]}, {value}"
+                else:
+                    response_headers[key] = value
 
-            content_type = response_headers.get("Content-Type", "")
+            content_type = _header_value(response_headers, "Content-Type") or ""
             primary_type = (
                 content_type.split(";")[0].strip()
                 if ";" in content_type
@@ -396,17 +566,13 @@ class PinnedHTTPTransport:
             if primary_type == "text/html" and body:
                 try:
                     body_str = body.decode("utf-8", errors="replace")
-                    title_match = __import__("re").search(
-                        r"<title>(.*?)</title>",
-                        body_str,
-                        __import__("re").IGNORECASE,
-                    )
+                    title_match = re.search(r"<title>(.*?)</title>", body_str, re.IGNORECASE)
                     if title_match:
                         html_title = title_match.group(1).strip()[:200]
                 except Exception:
                     pass
 
-            elapsed_ms = (time.monotonic() - (time.monotonic() - self.timeout)) * 1000
+            elapsed_ms = (time.monotonic() - request_start) * 1000
 
             result: dict[str, Any] = {
                 "success": True,
@@ -416,19 +582,28 @@ class PinnedHTTPTransport:
                 "content_type": primary_type,
                 "html_title": html_title,
                 "response_headers": response_headers,
+                "set_cookie_headers": set_cookie_headers,
+                "tls_information": tls_information,
                 "body": body,
                 "duration_ms": elapsed_ms,
             }
 
             if response.status in (301, 302, 303, 307, 308):
-                result["redirect_location"] = response_headers.get("Location")
+                result["redirect_location"] = _header_value(response_headers, "Location")
 
-            conn.close()
             return result
 
+        except urllib.error.URLError:
+            raise
         except Exception as e:
-            conn.close()
             raise urllib.error.URLError(f"Connection failed: {e}") from None
+        finally:
+            if conn is not None:
+                with contextlib.suppress(Exception):
+                    conn.close()
+            elif sock is not None:
+                with contextlib.suppress(Exception):
+                    sock.close()
 
 
 # ---------------------------------------------------------------------------
@@ -438,7 +613,10 @@ class PinnedHTTPTransport:
 def follow_redirects_with_validation(
     url: str,
     max_redirects: int = MAX_REDIRECT_COUNT,
-    timeout: int = TOTAL_DEADLINE,
+    timeout: float = TOTAL_DEADLINE,
+    connection_timeout: float = CONNECTION_TIMEOUT,
+    max_response_size: int = MAX_RESPONSE_SIZE,
+    allow_loopback: bool = False,
 ) -> tuple[dict[str, Any], list[str], str | None]:
     redirect_chain: list[str] = [url]
     current_url = url
@@ -448,29 +626,33 @@ def follow_redirects_with_validation(
         if time.monotonic() - start_time > timeout:
             return {}, redirect_chain, "Total deadline exceeded"
 
-        is_valid, error = validate_url_scheme(current_url)
+        is_valid, error = validate_url_scheme(current_url, allow_loopback=allow_loopback)
         if not is_valid:
             return {}, redirect_chain, error
 
         components = extract_url_components(current_url)
         hostname = components["hostname"]
 
-        try:
-            socket.getaddrinfo(hostname, None, family=socket.AF_UNSPEC)
-        except socket.gaierror as e:
-            return {}, redirect_chain, f"DNS resolution failed: {e}"
-
-        resolver = PinnedDNSResolver(hostname)
+        resolver = PinnedDNSResolver(hostname, allow_loopback=allow_loopback)
         dns_evidence = resolver.resolve_and_validate()
 
         if not dns_evidence.resolution_successful:
-            return {}, redirect_chain, f"DNS validation blocked: {dns_evidence.error}"
+            error = dns_evidence.error or "DNS validation failed"
+            if error.startswith("DNS resolution failed"):
+                return {}, redirect_chain, error
+            return {}, redirect_chain, f"DNS validation blocked: {error}"
 
-        transport = PinnedHTTPTransport(timeout=CONNECTION_TIMEOUT)
+        transport = PinnedHTTPTransport(
+            timeout=connection_timeout,
+            max_response_size=max_response_size,
+        )
         try:
             result = transport.fetch(current_url, resolver)
         except urllib.error.URLError as e:
             return {}, redirect_chain, f"Fetch failed: {e}"
+
+        if not result.get("success", True):
+            return result, redirect_chain, result.get("error", "Fetch failed")
 
         if result.get("redirect_location"):
             redirect_url = result["redirect_location"]
@@ -561,6 +743,16 @@ def inspect_website_safe(
     if error:
         raise urllib.error.URLError(error)
 
+    return _evidence_from_fetch(url, result, redirect_chain)
+
+
+def _evidence_from_fetch(
+    url: str,
+    result: dict[str, Any],
+    redirect_chain: list[str],
+    *,
+    error: str | None = None,
+) -> dict[str, Any]:
     evidence: dict[str, Any] = {
         "requested_url": url,
         "final_url": result.get("final_url", url),
@@ -568,9 +760,12 @@ def inspect_website_safe(
         "content_type": result.get("content_type"),
         "html_title": result.get("html_title"),
         "response_headers": result.get("response_headers", {}),
+        "set_cookie_headers": result.get("set_cookie_headers", []),
+        "tls_information": result.get("tls_information"),
         "redirect_chain": redirect_chain,
     }
-
+    if error:
+        evidence["error"] = error
     return evidence
 
 
@@ -582,9 +777,9 @@ def inspect_website_safe(
 class ScannerConfig:
     allow_loopback: bool = False
     max_redirects: int = MAX_REDIRECT_COUNT
-    connection_timeout: int = CONNECTION_TIMEOUT
-    read_timeout: int = READ_TIMEOUT
-    total_deadline: int = TOTAL_DEADLINE
+    connection_timeout: float = CONNECTION_TIMEOUT
+    read_timeout: float = READ_TIMEOUT
+    total_deadline: float = TOTAL_DEADLINE
     max_response_size: int = MAX_RESPONSE_SIZE
 
 
@@ -598,7 +793,7 @@ def scan_url(
     start_time = time.monotonic()
     scan_id = hashlib.sha256(f"{url}{time.time()}".encode()).hexdigest()[:12]
 
-    is_valid, error = validate_url_scheme(url)
+    is_valid, error = validate_url_scheme(url, allow_loopback=config.allow_loopback)
     if not is_valid:
         return ScanResult(
             scan_id=scan_id,
@@ -611,7 +806,12 @@ def scan_url(
         )
 
     result, redirect_chain, error = follow_redirects_with_validation(
-        url, max_redirects=config.max_redirects, timeout=config.total_deadline
+        url,
+        max_redirects=config.max_redirects,
+        timeout=config.total_deadline,
+        connection_timeout=config.connection_timeout,
+        max_response_size=config.max_response_size,
+        allow_loopback=config.allow_loopback,
     )
 
     if error:
@@ -642,18 +842,9 @@ def scan_url(
             status="failed",
             risk_band="critical",
             findings=findings,
-            evidence={"error": error, "redirect_chain": redirect_chain},
+            evidence=_evidence_from_fetch(url, result, redirect_chain, error=error),
             duration_ms=(time.monotonic() - start_time) * 1000,
         )
-
-    try:
-        evidence = inspect_website_safe(url)
-    except urllib.error.URLError as e:
-        evidence = {
-            "requested_url": url,
-            "final_url": url,
-            "error": f"Inspection blocked: {e}",
-        }
 
     findings = []
 
@@ -696,19 +887,7 @@ def scan_url(
     else:
         risk_band = "low"
 
-    evidence_dict: dict[str, Any] = {
-        "requested_url": url,
-        "final_url": result.get("final_url", url),
-        "http_status": result.get("http_status"),
-        "content_type": result.get("content_type"),
-        "html_title": evidence.get("html_title"),
-        "response_headers": evidence.get("response_headers", {}),
-        "tls_information": evidence.get("tls_information"),
-        "redirect_chain": redirect_chain,
-    }
-
-    if evidence.get("html_title"):
-        evidence_dict["html_title"] = evidence["html_title"]
+    evidence_dict = _evidence_from_fetch(url, result, redirect_chain)
 
     duration_ms = (time.monotonic() - start_time) * 1000
 

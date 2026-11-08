@@ -12,7 +12,7 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
-from phishguard_contracts import SCHEMA_MODELS, FeatureContract, ScanResult
+from phishguard_contracts import SCHEMA_MODELS, FeatureContract, RiskWeights, ScanResult
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_DIR = PACKAGE_ROOT / "schemas"
@@ -151,3 +151,17 @@ def test_terminal_scan_requires_assessment() -> None:
     payload["status"] = "complete"
     with pytest.raises(ValueError, match="risk and explanation"):
         ScanResult.model_validate(payload)
+
+
+def test_risk_weights_must_sum_to_100() -> None:
+    with pytest.raises(ValueError, match="sum to 100"):
+        RiskWeights(intel=35, url=15, brand=15, redirect=10, tls=15, http=9)
+
+
+def test_guarded_risk_band_is_valid() -> None:
+    payload = json.loads((FIXTURE_DIR / "scan-result.partial.json").read_text(encoding="utf-8"))
+    payload["risk"]["band"] = "guarded"
+    assert Draft202012Validator(
+        _schema("scan-result.schema.json"), registry=REGISTRY
+    ).is_valid(payload)
+    ScanResult.model_validate(payload)

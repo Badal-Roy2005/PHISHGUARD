@@ -7,28 +7,190 @@
   "completed_at": "2026-11-08T12:05:09Z",
   "duration_ms": 9020,
   "risk": {
-    "score": 64,
-    "band": "suspicious",
+    "score": null,
+    "band": "insufficient_evidence",
+    "verdict": "Insufficient evidence for a reliable risk score. Assessment is incomplete.",
+    "incomplete": true,
     "likelihood": {
-      "score": 0.71,
-      "band": "high",
+      "score": 0.1333,
+      "band": "low",
       "contributions": [
-        { "engine": "url", "weight": 0.55, "value": 0.8 }
+        {
+          "engine": "url",
+          "weight": 0.2,
+          "value": 0.6667,
+          "note": "url coverage=100%"
+        }
       ]
     },
     "posture": {
-      "score": 35,
+      "score": 50,
       "grade": "F",
+      "status": "partial",
       "penalties": [
-        { "id": "no-https", "points": 40 },
-        { "id": "csp-missing", "points": 12 }
+        {
+          "id": "http_finding_csp_missing",
+          "points": 50,
+          "note": "Content-Security-Policy is absent."
+        }
       ]
     },
     "confidence": {
-      "score": 0.42,
+      "score": 0.25,
       "engines_ok": 2,
       "engines_total": 6,
-      "notes": ["ml: unknown", "tls: error", "intel: skipped (no api key)"]
+      "covered_weight": 25,
+      "total_weight": 100,
+      "incomplete": true,
+      "missing_evidence": [
+        "intel: 0% coverage",
+        "brand: 0% coverage",
+        "redirect: 0% coverage",
+        "tls: 0% coverage"
+      ],
+      "notes": [
+        "policy=m7-2026-11-09.2; calibrated=false",
+        "ML probability is reported separately and is not part of the risk score."
+      ]
+    },
+    "factors": [
+      {
+        "reason_code": "intel_unavailable",
+        "category": "intel",
+        "source": "intel",
+        "observed": "No threat-intelligence provider is configured.",
+        "contribution": 0,
+        "max_contribution": 0,
+        "direction": "informational",
+        "severity": "info",
+        "explanation": "No threat-intelligence provider returned a usable result.",
+        "evidence_ref": "intel.provider_statuses",
+        "status": "unavailable"
+      },
+      {
+        "reason_code": "url_finding_url_no_https",
+        "category": "url",
+        "source": "url",
+        "observed": "Plain HTTP",
+        "contribution": 10,
+        "max_contribution": 10,
+        "direction": "increases_risk",
+        "severity": "high",
+        "explanation": "The URL uses unencrypted HTTP.",
+        "evidence_ref": "url.findings.0",
+        "status": "applied"
+      },
+      {
+        "reason_code": "brand_evidence_unavailable",
+        "category": "brand",
+        "source": "url",
+        "observed": "no brand engine",
+        "contribution": 0,
+        "max_contribution": 0,
+        "direction": "informational",
+        "severity": "info",
+        "explanation": "Brand-impersonation evidence is not available in M7.",
+        "status": "unavailable"
+      },
+      {
+        "reason_code": "redirect_unavailable",
+        "category": "redirect",
+        "source": "http",
+        "observed": "no redirect chain",
+        "contribution": 0,
+        "max_contribution": 0,
+        "direction": "informational",
+        "severity": "info",
+        "explanation": "No redirect chain was available for assessment.",
+        "status": "unavailable"
+      },
+      {
+        "reason_code": "tls_unavailable",
+        "category": "tls",
+        "source": "tls",
+        "observed": "handshake failed: certificate expired",
+        "contribution": 0,
+        "max_contribution": 0,
+        "direction": "informational",
+        "severity": "info",
+        "explanation": "No usable evidence was returned by this engine.",
+        "status": "error"
+      },
+      {
+        "reason_code": "http_finding_csp_missing",
+        "category": "http",
+        "source": "http",
+        "observed": "No CSP restricts script and resource origins.",
+        "contribution": 5,
+        "max_contribution": 5,
+        "direction": "increases_risk",
+        "severity": "medium",
+        "explanation": "Content-Security-Policy is missing.",
+        "evidence_ref": "http.headers.content-security-policy",
+        "status": "applied"
+      },
+      {
+        "reason_code": "ml_probability_unavailable",
+        "category": "ml",
+        "source": "ml",
+        "observed": "missing",
+        "contribution": 0,
+        "max_contribution": 0,
+        "direction": "informational",
+        "severity": "info",
+        "explanation": "ML probability was unavailable and was not used.",
+        "status": "unavailable"
+      }
+    ],
+    "reason_codes": [
+      "intel_unavailable",
+      "url_finding_url_no_https",
+      "brand_evidence_unavailable",
+      "redirect_unavailable",
+      "tls_unavailable",
+      "http_finding_csp_missing",
+      "ml_probability_unavailable"
+    ],
+    "model_probability": null,
+    "policy": {
+      "version": "m7-2026-11-09.2",
+      "calibrated": false,
+      "weights": {
+        "intel": 35,
+        "url": 15,
+        "brand": 15,
+        "redirect": 10,
+        "tls": 15,
+        "http": 10
+      },
+      "bands": [
+        {
+          "band": "low",
+          "min_score": 0,
+          "max_score": 19
+        },
+        {
+          "band": "guarded",
+          "min_score": 20,
+          "max_score": 39
+        },
+        {
+          "band": "suspicious",
+          "min_score": 40,
+          "max_score": 69
+        },
+        {
+          "band": "high",
+          "min_score": 70,
+          "max_score": 100
+        }
+      ],
+      "min_coverage_for_score": 0.5,
+      "min_coverage_for_low": 0.75,
+      "notes": [
+        "Weights and bands are provisional heuristics, not calibrated probabilities.",
+        "Brand-impersonation evidence is unavailable until a brand engine exists."
+      ]
     }
   },
   "engines": {
@@ -45,9 +207,17 @@
       "engine": "url",
       "status": "ok",
       "findings": [
-        { "id": "url-no-https", "title": "Plain HTTP", "severity": "high", "detail": null, "evidence_ref": null }
+        {
+          "id": "url-no-https",
+          "title": "Plain HTTP",
+          "severity": "high",
+          "detail": null,
+          "evidence_ref": null
+        }
       ],
-      "evidence": { "scheme": "http" },
+      "evidence": {
+        "scheme": "http"
+      },
       "source": "heuristic",
       "duration_ms": 2,
       "error": null
@@ -64,8 +234,19 @@
     "http": {
       "engine": "http",
       "status": "ok",
-      "findings": [],
-      "evidence": { "status": 200, "redirect_chain": [] },
+      "findings": [
+        {
+          "id": "csp_missing",
+          "title": "Content-Security-Policy is missing",
+          "severity": "medium",
+          "detail": "No CSP restricts script and resource origins.",
+          "evidence_ref": "http.headers.content-security-policy"
+        }
+      ],
+      "evidence": {
+        "status": 200,
+        "redirect_chain": []
+      },
       "source": "http-fetch",
       "duration_ms": 210,
       "error": null
@@ -91,9 +272,24 @@
   },
   "explanation": {
     "top_factors": [
-      { "feature": "url-no-https", "value": "http", "contribution": 0.2, "direction": "increases_risk", "source": "url" }
+      {
+        "feature": "url_finding_url_no_https",
+        "value": "Plain HTTP",
+        "contribution": 10.0,
+        "direction": "increases_risk",
+        "source": "url"
+      },
+      {
+        "feature": "http_finding_csp_missing",
+        "value": "No CSP restricts script and resource origins.",
+        "contribution": 5.0,
+        "direction": "increases_risk",
+        "source": "http"
+      }
     ],
-    "summary": "Partial result: ML and TLS unavailable. Score reflects only deterministic URL signals and posture."
+    "summary": "Insufficient evidence for a reliable risk score. Assessment is incomplete."
   },
-  "evidence": { "redirect_chain": [] }
+  "evidence": {
+    "redirect_chain": []
+  }
 }

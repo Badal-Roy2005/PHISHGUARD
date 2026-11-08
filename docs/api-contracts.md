@@ -1,6 +1,6 @@
 # API contracts
 
-**Version: `2026-11-09.1`** · source of truth: `packages/contracts/schemas/*.schema.json`
+**Version: `2026-11-09.2`** · source of truth: `packages/contracts/schemas/*.schema.json`
 · Python mirror: `packages/contracts/src/phishguard_contracts/models.py`
 · TS mirror: `packages/contracts/src/types.ts`
 
@@ -15,7 +15,7 @@ validate against both the JSON Schema and the Pydantic model.
 | `GET` | `/api/scan/{id}` | web | owner / anon token | M9 |
 | `GET` | `/api/reports` | web | public read | M8 |
 | `POST` | `/api/reports` | web | authenticated | M8 |
-| `POST` | `/internal/analyze` | analysis | `X-Service-Token` | M1: validates, returns 501 |
+| `POST` | `/internal/analyze` | analysis | `X-Service-Token` | M7: runs url + tls + http + intel engines and returns a deterministic risk assessment |
 | `GET` | `/internal/config` | both | `X-Service-Token` | implemented |
 | `GET` | `/model/info` | ml | none | **implemented (M2)** |
 | `POST` | `/predict` | ml | `X-Service-Token` | **implemented (M2)** |
@@ -91,36 +91,76 @@ POST /api/scan
 `complete` and `partial` require `risk` and `explanation` (enforced in both
 schema and model).
 
-## Risk block
+## Risk block (M7)
 
-Three separate outputs, never collapsed:
+One deterministic assessment, with four separate concepts:
 
 ```json
 {
-  "score": 78,
+  "score": 83,
   "band": "high",
-  "likelihood": { "score": 0.82, "band": "high",
-                  "contributions": [ { "engine": "ml", "weight": 0.45, "value": 0.91 } ] },
-  "posture":    { "score": 42, "grade": "D",
-                  "penalties": [ { "id": "hsts-missing", "points": 8 } ] },
-  "confidence": { "score": 0.86, "engines_ok": 5, "engines_total": 6, "notes": [] }
+  "verdict": "High risk.",
+  "incomplete": false,
+  "likelihood": { "score": 1.0, "band": "critical",
+                  "contributions": [ { "engine": "intel", "weight": 0.4667, "value": 1.0 } ] },
+  "posture":    { "score": 68, "grade": "D", "status": "ok",
+                  "penalties": [ { "id": "http_finding_hsts_missing", "points": 20 } ] },
+  "confidence": { "score": 1.0, "engines_ok": 6, "engines_total": 6,
+                  "covered_weight": 100, "total_weight": 100,
+                  "incomplete": false, "missing_evidence": [], "notes": [] },
+  "factors": [
+    { "reason_code": "intel_confirmed_match", "category": "intel", "source": "intel",
+      "observed": "google_safe_browsing", "contribution": 35, "max_contribution": 35,
+      "direction": "increases_risk", "severity": "high",
+      "explanation": "At least one threat-intelligence provider reported a match.",
+      "status": "applied" }
+  ],
+  "reason_codes": ["intel_confirmed_match"],
+  "model_probability": {
+    "probability_phishing": 0.91, "label": "phishing", "status": "ok",
+    "model_version": "1.0.0", "calibrated": false,
+    "used_in_risk_score": false, "source": "phiUSIIL-xgb@1.0.0"
+  },
+  "policy": {
+    "version": "m7-2026-11-09.2", "calibrated": false,
+    "weights": { "intel": 35, "url": 15, "brand": 15,
+                 "redirect": 10, "tls": 15, "http": 10 },
+    "bands": [ { "band": "low", "min_score": 0, "max_score": 19 } ],
+    "min_coverage_for_score": 0.5, "min_coverage_for_low": 0.75
+  }
 }
 ```
 
-- `band`: `low | suspicious | high | critical | insufficient_evidence`.
-- `score` is `null` when confidence is too low to publish one.
-- Weights must sum to 1.0; no single engine may contribute more than 40%.
+- `score` is the provisional 0–100 heuristic sum. It is `null` when coverage is
+  too low to publish a score.
+- `band`: `low | guarded | suspicious | high | insufficient_evidence`.
+  `critical` remains in the enum for older clients but M7 does not emit it.
+- `likelihood` is threat likelihood from intel, URL, brand and redirect
+  evidence. It is not the ML probability.
+- `posture` is website security posture from TLS and HTTP configuration.
+- `confidence` is evidence coverage, not certainty that the target is safe.
+- `model_probability` is the ML result, exposed separately with
+  `used_in_risk_score: false`.
+- `factors` are the complete contributing-factor list. Each has a stable
+  `reason_code`, source, observed value, contribution, maximum contribution,
+  direction, severity, explanation and status.
+- Missing, unavailable or errored evidence is visible in
+  `confidence.missing_evidence` and in factors; it is never scored as safe.
+- Weights and bands are **provisional, uncalibrated heuristics**. See
+  `docs/risk-assessment.md`.
 
 ## Explanation
 
 ```json
-{ "top_factors": [ { "feature": "TLDLegitimateProb", "value": 0.11,
-                     "contribution": 0.18, "direction": "increases_risk",
-                     "source": "ml" } ],
-  "summary": "Model probability 0.91 with credential-harvesting keywords." }
+{ "top_factors": [ { "feature": "intel_confirmed_match",
+                     "value": "google_safe_browsing", "contribution": 35.0,
+                     "direction": "increases_risk", "source": "intel" } ],
+  "summary": "High risk." }
 ```
 
-`source` distinguishes model-driven factors from deterministic findings.
+`source` distinguishes model-driven factors from deterministic findings. The
+full factor list lives in `risk.factors`; `top_factors` is the ordered subset
+for display.
 
 ## Errors
 
@@ -174,6 +214,73 @@ not return a prediction.
 
 `FEATURE_SCHEMA_VERSION` and `CONTRACT_VERSION` are exported by
 `packages/contracts` and reported by `/health` and `/version`.
+
+## Transport engines (M6)
+
+`/internal/analyze` runs the M3 URL engine, the M6 `tls` and `http` engines, and
+the M5B `intel` engine. The scanner is called once per scan; TLS and HTTP
+assessment consume its evidence and never fetch the target again.
+
+- `tls` evidence includes `verified`, `protocol`, `cipher`, certificate subject,
+  issuer, validity dates and SAN count. Findings cover untrusted, expired,
+  not-yet-valid, expiring, weak-protocol and weak-cipher certificates.
+- `http` evidence includes present/missing security headers, HTTP status, HTTPS
+  use and cookie-flag counts. Cookie values and response bodies are never
+  included.
+- Certificate Transparency is off by default (`CT_ENABLED=false`) and is only
+  queried when the request sets `options.include_ct=true`. A requested CT
+  lookup that is disabled, rate-limited, times out or fails makes the `tls`
+  engine `partial`; it never removes the TLS findings.
+- `unknown`, `skipped`, `partial` and `error` are never safe verdicts. M7
+  consumes their evidence and reduces coverage; it never turns missing evidence
+  into a low-risk result.
+
+## Threat-intelligence engine (M5B)
+
+`/internal/analyze` also runs the M5B `intel` engine. M7 turns provider
+`match`, `no_match`, `unavailable` and `error` states into distinct factors.
+A no-match or provider failure is never converted into a safe verdict.
+
+Each provider is reported separately in `engines.intel.evidence.providers`:
+
+```json
+{
+  "google_safe_browsing": {
+    "status": "match | no_match | unavailable | error",
+    "reason": null,
+    "error": null,
+    "looked_up_at": "2026-11-08T12:00:00Z",
+    "expires_at": "2026-11-08T13:00:00Z",
+    "cached": false,
+    "findings": [
+      {
+        "provider": "google_safe_browsing",
+        "status": "match",
+        "queried_url": "https://example.com/login",
+        "provider_reference": null,
+        "category": "social_engineering",
+        "severity": "high",
+        "metadata": { "threat_type": "SOCIAL_ENGINEERING" },
+        "looked_up_at": "2026-11-08T12:00:00Z",
+        "expires_at": "2026-11-08T13:00:00Z",
+        "source": "google_safe_browsing",
+        "error": null
+      }
+    ]
+  }
+}
+```
+
+- `match` is the only state that produces a contract `Finding`.
+- `no_match` is not a safe verdict; it only means this provider did not report a
+  match.
+- `unavailable` covers missing credentials, timeouts, outages, auth failures and
+  quota/rate limits. `error` covers malformed or unexpected responses. Neither
+  may be rendered or scored as safe.
+- `engines.intel.status` is `ok | partial | skipped | unknown | error` and
+  follows the aggregate rules in `docs/threat-intelligence.md`.
+- Provider metadata is preserved, but raw HTTP bodies and credentials are not
+  returned or logged.
 
 ## Community reports
 

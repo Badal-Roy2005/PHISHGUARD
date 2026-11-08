@@ -47,6 +47,17 @@ def test_invalid_numeric_bounds_are_reported() -> None:
     assert any("MAX_CONCURRENT_SCANS" in p for p in excinfo.value.problems)
 
 
+def test_invalid_intel_bounds_are_reported() -> None:
+    with pytest.raises(ConfigError) as excinfo:
+        load_settings({"ENV": "development", "INTEL_HTTP_TIMEOUT_SECONDS": "99"})
+    assert any("INTEL_HTTP_TIMEOUT_SECONDS" in p for p in excinfo.value.problems)
+
+
+def test_intel_cache_can_be_disabled() -> None:
+    settings = load_settings({"ENV": "development", "INTEL_CACHE_ENABLED": "false"})
+    assert settings.intel_cache_enabled is False
+
+
 def test_redacted_summary_never_contains_secrets() -> None:
     from app.settings import redacted_summary
 
@@ -63,3 +74,39 @@ def test_redacted_summary_never_contains_secrets() -> None:
     assert "super-secret-key" not in serialized
     assert "service-role-secret" not in serialized
     assert summary["threat_intel"]["google_safe_browsing"] == "configured"
+
+
+def test_ct_is_disabled_by_default_and_bounded() -> None:
+    settings = load_settings({"ENV": "development"})
+    assert settings.ct_enabled is False
+    assert settings.ct_timeout_seconds == 5.0
+    assert settings.ct_max_response_bytes == 1_000_000
+    assert settings.ct_max_records == 1_000
+
+
+def test_ct_settings_are_validated() -> None:
+    settings = load_settings(
+        {
+            "ENV": "development",
+            "CT_ENABLED": "true",
+            "CT_TIMEOUT_SECONDS": "2.5",
+            "CT_MAX_RESPONSE_BYTES": "2048",
+            "CT_MAX_RECORDS": "50",
+        }
+    )
+    assert settings.ct_enabled is True
+    assert settings.ct_timeout_seconds == 2.5
+    assert settings.ct_max_response_bytes == 2048
+    assert settings.ct_max_records == 50
+
+    with pytest.raises(ConfigError) as excinfo:
+        load_settings({"ENV": "development", "CT_TIMEOUT_SECONDS": "99"})
+    assert any("CT_TIMEOUT_SECONDS" in p for p in excinfo.value.problems)
+
+
+def test_redacted_summary_reports_ct_without_secrets() -> None:
+    from app.settings import redacted_summary
+
+    summary = redacted_summary(load_settings({"ENV": "development"}))
+    assert summary["certificate_transparency"]["enabled"] is False
+    assert "CT_TIMEOUT" not in repr(summary)
