@@ -1,0 +1,8 @@
+{
+  "url": "https://secure-update-login.example.com/verify",
+  "options": {
+    "include_intel": true,
+    "include_ct": false,
+    "timeout_ms": 8000
+  }
+}

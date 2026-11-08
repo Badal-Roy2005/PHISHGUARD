@@ -1,0 +1,27 @@
+{
+  "label": "phishing",
+  "probability_phishing": 0.91,
+  "contributions": [
+    { "feature": "URLLength", "value": 41, "shap": 0.12 },
+    { "feature": "IsDomainIP", "value": 0, "shap": -0.03 }
+  ],
+  "missing_features": ["DomainTitleMatchScore"],
+  "status": "partial",
+  "model": {
+    "name": "phiusiil-xgb",
+    "version": "1.0.0",
+    "trained_at": "2026-11-08T11:00:00Z",
+    "dataset": "PhiUSIIL 235795x53",
+    "feature_contract_version": "1",
+    "label_map": { "0": "phishing", "1": "legitimate" },
+    "metrics": {
+      "accuracy": 0.952,
+      "precision": 0.948,
+      "recall": 0.931,
+      "f1": 0.94,
+      "roc_auc": 0.97,
+      "pr_auc": 0.96
+    },
+    "artifact_sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+  }
+}

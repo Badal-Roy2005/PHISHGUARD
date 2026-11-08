@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://phishguard.local/schemas/report.schema.json",
+  "title": "Community threat report contracts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "create_request",
+    "report"
+  ],
+  "properties": {
+    "create_request": {
+      "$ref": "#/$defs/CreateReportRequest"
+    },
+    "report": {
+      "$ref": "#/$defs/Report"
+    }
+  },
+  "$defs": {
+    "ReportCategory": {
+      "type": "string",
+      "enum": [
+        "phishing",
+        "malware",
+        "scam",
+        "credential_theft",
+        "impersonation",
+        "other"
+      ]
+    },
+    "ReportStatus": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "verified",
+        "rejected"
+      ]
+    },
+    "CreateReportRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "category",
+        "description"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 2048,
+          "pattern": "^[hH][tT][tT][pP][sS]?://"
+        },
+        "category": {
+          "$ref": "#/$defs/ReportCategory"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 2000
+        },
+        "evidence": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true,
+          "description": "Optional user-supplied context. Stored as data, never rendered as HTML."
+        }
+      }
+    },
+    "Report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "url",
+        "category",
+        "status",
+        "created_at",
+        "vote_count"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/Uuid"
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "category": {
+          "$ref": "#/$defs/ReportCategory"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "status": {
+          "$ref": "#/$defs/ReportStatus"
+        },
+        "created_at": {
+          "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/Timestamp"
+        },
+        "reporter_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "vote_count": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

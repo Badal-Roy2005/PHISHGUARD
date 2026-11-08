@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Python dependencies
+        run: |
+          for project in packages/contracts services/analysis services/ml; do
+            (cd "$project" && uv sync --frozen)
+          done
+
+      - run: pnpm typecheck
+      - run: bash scripts/lint-python.sh
+      - run: pnpm lint
+      - run: bash scripts/test-python.sh
+      - run: pnpm test
+      - run: pnpm build

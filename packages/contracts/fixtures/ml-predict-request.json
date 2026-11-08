@@ -1,0 +1,12 @@
+{
+  "features": {
+    "URLLength": 41,
+    "DomainLength": 31,
+    "IsDomainIP": 0,
+    "NoOfSubDomain": 2,
+    "HasObfuscation": 0,
+    "IsHTTPS": 1
+  },
+  "explain": true,
+  "model_version": null
+}

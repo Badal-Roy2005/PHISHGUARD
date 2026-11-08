@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://phishguard.local/schemas/scan-accepted.schema.json",
+  "title": "ScanAccepted",
+  "description": "202 response when a scan is queued. Clients poll GET /api/scan/{scan_id}.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scan_id", "status", "poll_after_ms"],
+  "properties": {
+    "scan_id": { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/Uuid" },
+    "status": {
+      "type": "string",
+      "enum": ["queued", "running"]
+    },
+    "poll_after_ms": { "type": "integer", "minimum": 100, "maximum": 10000 }
+  }
+}

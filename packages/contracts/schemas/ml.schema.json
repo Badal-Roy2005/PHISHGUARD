@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://phishguard.local/schemas/ml.schema.json",
+  "title": "ML inference contracts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["predict_request", "predict_response"],
+  "properties": {
+    "predict_request": { "$ref": "#/$defs/PredictRequest" },
+    "predict_response": { "$ref": "#/$defs/PredictResponse" }
+  },
+  "$defs": {
+    "PredictRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["features"],
+      "properties": {
+        "features": {
+          "type": "object",
+          "description": "Feature name -> value, keyed by FeatureContractEntry.name (not dataset_column).",
+          "additionalProperties": { "type": ["number", "boolean", "string"] },
+          "minProperties": 1,
+          "maxProperties": 128
+        },
+        "explain": { "type": "boolean", "default": true },
+        "model_version": {
+          "type": ["string", "null"],
+          "description": "Optional pin. null = currently loaded model."
+        }
+      }
+    },
+    "Contribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["feature", "shap"],
+      "properties": {
+        "feature": { "type": "string", "maxLength": 128 },
+        "value": { "type": ["number", "string", "boolean", "null"] },
+        "shap": { "type": "number" }
+      }
+    },
+    "PredictResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "probability_phishing", "model", "status"],
+      "properties": {
+        "label": { "type": "string", "enum": ["phishing", "legitimate", "unknown"] },
+        "probability_phishing": { "type": "number", "minimum": 0, "maximum": 1 },
+        "contributions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Contribution" },
+          "maxItems": 64
+        },
+        "missing_features": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 128 },
+          "maxItems": 128
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ok", "partial", "unknown"],
+          "description": "partial = some features were unavailable (confidence reduced). unknown = no usable prediction."
+        },
+        "model": { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/ModelMetadata" }
+      }
+    }
+  }
+}

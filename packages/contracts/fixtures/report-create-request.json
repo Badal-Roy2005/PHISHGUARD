@@ -1,0 +1,5 @@
+{
+  "url": "https://secure-update-login.example.com/verify",
+  "category": "phishing",
+  "description": "Fake browser update page asking for Microsoft credentials."
+}

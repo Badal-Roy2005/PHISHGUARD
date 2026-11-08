@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://phishguard.local/schemas/scan-result.schema.json",
+  "title": "ScanResult",
+  "description": "Terminal or in-flight representation of one scan. Engine keys are always present so that a missing verdict is explicit, never implied.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scan_id",
+    "url",
+    "normalized_url",
+    "status",
+    "created_at",
+    "engines",
+    "risk",
+    "explanation"
+  ],
+  "properties": {
+    "scan_id": { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/Uuid" },
+    "url": { "type": "string", "maxLength": 2048 },
+    "normalized_url": { "type": "string", "maxLength": 2048 },
+    "status": { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/ScanStatus" },
+    "created_at": { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/Timestamp" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "duration_ms": { "type": ["number", "null"], "minimum": 0 },
+    "risk": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/RiskAssessment" }
+      ],
+      "description": "null while queued or running; non-null once an assessment exists."
+    },
+    "engines": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ml", "url", "tls", "http", "intel", "community"],
+      "properties": {
+        "ml": { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/EngineReport" },
+        "url": { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/EngineReport" },
+        "tls": { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/EngineReport" },
+        "http": { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/EngineReport" },
+        "intel": { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/EngineReport" },
+        "community": { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/EngineReport" }
+      }
+    },
+    "explanation": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "https://phishguard.local/schemas/common.schema.json#/$defs/Explanation" }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Cross-engine evidence: redirect chain, TLS summary, header summary. No raw response bodies."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "enum": ["complete", "partial"] } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["risk", "explanation"],
+        "properties": {
+          "risk": { "type": "object" },
+          "explanation": { "type": "object" }
+        }
+      }
+    }
+  ]
+}

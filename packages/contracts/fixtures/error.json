@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "blocked_target",
+    "message": "Target resolves to a private address and was not scanned.",
+    "request_id": "req_01HZX8K4T9",
+    "details": { "reason": "private_ip", "resolved": ["10.0.0.7"] }
+  }
+}

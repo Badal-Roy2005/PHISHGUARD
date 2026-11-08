@@ -1,0 +1,115 @@
+{
+  "scan_id": "6f1c2a44-3b7d-4c1e-9f2a-1d0e5b8c7a91",
+  "url": "https://secure-update-login.example.com/verify",
+  "normalized_url": "https://secure-update-login.example.com/verify",
+  "status": "complete",
+  "created_at": "2026-11-08T12:00:00Z",
+  "completed_at": "2026-11-08T12:00:04Z",
+  "duration_ms": 4120,
+  "risk": {
+    "score": 78,
+    "band": "high",
+    "likelihood": {
+      "score": 0.82,
+      "band": "high",
+      "contributions": [
+        { "engine": "ml", "weight": 0.45, "value": 0.91 },
+        { "engine": "url", "weight": 0.35, "value": 0.78 },
+        { "engine": "intel", "weight": 0.2, "value": 0.6 }
+      ]
+    },
+    "posture": {
+      "score": 42,
+      "grade": "D",
+      "penalties": [
+        { "id": "hsts-missing", "points": 8 },
+        { "id": "csp-missing", "points": 12 }
+      ]
+    },
+    "confidence": {
+      "score": 0.86,
+      "engines_ok": 5,
+      "engines_total": 6,
+      "notes": ["community: no reports yet"]
+    }
+  },
+  "engines": {
+    "ml": {
+      "engine": "ml",
+      "status": "ok",
+      "findings": [
+        { "id": "ml-high-probability", "title": "Model classifies as phishing", "severity": "high", "detail": "p=0.91", "evidence_ref": "ml.contributions" }
+      ],
+      "evidence": { "probability_phishing": 0.91, "model": "phiUSIIL-xgb@1.0.0" },
+      "source": "phiUSIIL-xgb@1.0.0",
+      "duration_ms": 42,
+      "error": null
+    },
+    "url": {
+      "engine": "url",
+      "status": "ok",
+      "findings": [
+        { "id": "url-suspicious-keywords", "title": "Credential-related keywords in URL", "severity": "medium", "detail": "secure, login, verify", "evidence_ref": "url.keywords" }
+      ],
+      "evidence": { "keywords": ["secure", "login", "verify"], "host": "secure-update-login.example.com" },
+      "source": "heuristic",
+      "duration_ms": 2,
+      "error": null
+    },
+    "tls": {
+      "engine": "tls",
+      "status": "ok",
+      "findings": [
+        { "id": "tls-short-validity", "title": "Certificate valid for 30 days", "severity": "low", "detail": "30 days remaining", "evidence_ref": "tls.days_remaining" }
+      ],
+      "evidence": { "issuer": "Example CA", "days_remaining": 30, "self_signed": false },
+      "source": "tls-handshake",
+      "duration_ms": 310,
+      "error": null
+    },
+    "http": {
+      "engine": "http",
+      "status": "ok",
+      "findings": [
+        { "id": "hsts-missing", "title": "Strict-Transport-Security missing", "severity": "medium", "detail": null, "evidence_ref": "http.headers" }
+      ],
+      "evidence": { "status": 200, "redirect_chain": [], "headers": { "content-type": "text/html" } },
+      "source": "http-fetch",
+      "duration_ms": 240,
+      "error": null
+    },
+    "intel": {
+      "engine": "intel",
+      "status": "ok",
+      "findings": [
+        { "id": "intel-safebrowsing-hit", "title": "Listed by Google Safe Browsing", "severity": "critical", "detail": "SOCIAL_ENGINEERING", "evidence_ref": "intel.safebrowsing" }
+      ],
+      "evidence": { "safebrowsing": { "matched": true, "threat_types": ["SOCIAL_ENGINEERING"] }, "urlhaus": { "matched": false } },
+      "source": "safebrowsing+urlhaus",
+      "duration_ms": 180,
+      "error": null
+    },
+    "community": {
+      "engine": "community",
+      "status": "ok",
+      "findings": [],
+      "evidence": { "report_count": 0, "vote_count": 0 },
+      "source": "community",
+      "duration_ms": 12,
+      "error": null
+    }
+  },
+  "explanation": {
+    "top_factors": [
+      { "feature": "TLDLegitimateProb", "value": 0.11, "contribution": 0.18, "direction": "increases_risk", "source": "ml" },
+      { "feature": "tls-short-validity", "value": 30, "contribution": 0.05, "direction": "increases_risk", "source": "tls" },
+      { "feature": "url-suspicious-keywords", "value": 3, "contribution": 0.09, "direction": "increases_risk", "source": "url" }
+    ],
+    "summary": "Model probability 0.91 with credential-harvesting keywords and a young certificate."
+  },
+  "evidence": {
+    "redirect_chain": [],
+    "tls": { "issuer": "Example CA", "days_remaining": 30 },
+    "headers": { "content-type": "text/html" }
+  }
+}

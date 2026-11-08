@@ -1,0 +1,678 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://phishguard.local/schemas/common.schema.json",
+  "title": "PHISHGUARD common contracts",
+  "description": "Shared definitions. Source of truth for Python models and TypeScript types.",
+  "$defs": {
+    "Uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "Timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC, RFC 3339."
+    },
+    "ScanStatus": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "running",
+        "complete",
+        "partial",
+        "failed"
+      ],
+      "description": "queued/running are in-flight; partial means at least one engine did not return a usable verdict."
+    },
+    "EngineStatus": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "partial",
+        "skipped",
+        "unknown",
+        "error"
+      ],
+      "description": "skipped = not configured; unknown = attempted but no verdict; error = failed. None of these may be rendered as safe."
+    },
+    "Severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "RiskBand": {
+      "type": "string",
+      "enum": [
+        "low",
+        "suspicious",
+        "high",
+        "critical",
+        "insufficient_evidence"
+      ]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "invalid_url",
+        "blocked_target",
+        "rate_limited",
+        "not_found",
+        "unauthorized",
+        "payload_too_large",
+        "upstream_unavailable",
+        "timeout",
+        "internal"
+      ]
+    },
+    "EngineName": {
+      "type": "string",
+      "enum": [
+        "ml",
+        "url",
+        "tls",
+        "http",
+        "intel",
+        "community"
+      ]
+    },
+    "Finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "severity"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "evidence_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Pointer into EngineReport.evidence."
+        }
+      }
+    },
+    "EngineReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engine",
+        "status",
+        "findings",
+        "source",
+        "duration_ms"
+      ],
+      "properties": {
+        "engine": {
+          "$ref": "#/$defs/EngineName"
+        },
+        "status": {
+          "$ref": "#/$defs/EngineStatus"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "maxItems": 100
+        },
+        "evidence": {
+          "type": "object",
+          "description": "Engine-specific structured evidence. Never free-form HTML.",
+          "additionalProperties": true
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Attribution, e.g. phiUSIIL-xgb@1.0.0 or safebrowsing."
+        },
+        "duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1024
+        }
+      }
+    },
+    "ScoreContribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engine",
+        "weight",
+        "value"
+      ],
+      "properties": {
+        "engine": {
+          "$ref": "#/$defs/EngineName"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        }
+      }
+    },
+    "LikelihoodScore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "band",
+        "contributions"
+      ],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "band": {
+          "type": "string",
+          "enum": [
+            "low",
+            "suspicious",
+            "high",
+            "critical"
+          ]
+        },
+        "contributions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ScoreContribution"
+          }
+        }
+      }
+    },
+    "PosturePenalty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "points"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "points": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        }
+      }
+    },
+    "PostureScore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "grade",
+        "penalties"
+      ],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "grade": {
+          "type": "string",
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D",
+            "F",
+            "unknown"
+          ]
+        },
+        "penalties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PosturePenalty"
+          }
+        }
+      }
+    },
+    "ConfidenceScore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "engines_ok",
+        "engines_total"
+      ],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "engines_ok": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "engines_total": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 20
+        }
+      }
+    },
+    "RiskAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "band",
+        "likelihood",
+        "posture",
+        "confidence"
+      ],
+      "properties": {
+        "score": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "null when confidence is too low to publish a score."
+        },
+        "band": {
+          "$ref": "#/$defs/RiskBand"
+        },
+        "likelihood": {
+          "$ref": "#/$defs/LikelihoodScore"
+        },
+        "posture": {
+          "$ref": "#/$defs/PostureScore"
+        },
+        "confidence": {
+          "$ref": "#/$defs/ConfidenceScore"
+        }
+      }
+    },
+    "ExplanationFactor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "feature",
+        "direction",
+        "source"
+      ],
+      "properties": {
+        "feature": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "value": {
+          "type": [
+            "number",
+            "string",
+            "boolean",
+            "null"
+          ]
+        },
+        "contribution": {
+          "type": "number"
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "increases_risk",
+            "decreases_risk",
+            "informational"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "ml",
+            "url",
+            "tls",
+            "http",
+            "intel",
+            "community"
+          ]
+        }
+      }
+    },
+    "Explanation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "top_factors",
+        "summary"
+      ],
+      "properties": {
+        "top_factors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ExplanationFactor"
+          },
+          "maxItems": 20
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 1024
+        }
+      }
+    },
+    "ModelMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "accuracy": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "precision": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "recall": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "f1": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "roc_auc": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "pr_auc": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "ModelMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "feature_contract_version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "trained_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "dataset": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "feature_contract_version": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "label_map": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "0": {
+                  "const": "phishing"
+                },
+                "1": {
+                  "const": "legitimate"
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "PhiUSIIL: 0 = phishing, 1 = legitimate. Inverted from intuition."
+        },
+        "metrics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelMetrics"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "artifact_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "FeatureDType": {
+      "type": "string",
+      "enum": [
+        "number",
+        "integer",
+        "boolean",
+        "category"
+      ]
+    },
+    "FeatureLiveSource": {
+      "type": "string",
+      "enum": [
+        "url",
+        "tls",
+        "http",
+        "intel",
+        "derived",
+        "dataset_only"
+      ]
+    },
+    "FeatureDefaultPolicy": {
+      "type": "string",
+      "enum": [
+        "reject",
+        "unknown",
+        "neutral"
+      ],
+      "description": "reject: prediction cannot proceed. unknown: proceed with reduced confidence. neutral: safe default with no signal."
+    },
+    "FeatureContractEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "dataset_column",
+        "dtype",
+        "required",
+        "live_source",
+        "default_policy"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "dataset_column": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "dtype": {
+          "$ref": "#/$defs/FeatureDType"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "live_source": {
+          "$ref": "#/$defs/FeatureLiveSource"
+        },
+        "default_policy": {
+          "$ref": "#/$defs/FeatureDefaultPolicy"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 512
+        }
+      }
+    },
+    "FeatureContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "model_version",
+        "label_map",
+        "features"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "model_version": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "dataset": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "rows": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "feature_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "class_counts": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "label_map": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "0",
+            "1"
+          ],
+          "properties": {
+            "0": {
+              "const": "phishing"
+            },
+            "1": {
+              "const": "legitimate"
+            }
+          }
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FeatureContractEntry"
+          },
+          "minItems": 1
+        }
+      }
+    }
+  }
+}

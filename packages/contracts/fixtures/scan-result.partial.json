@@ -1,0 +1,99 @@
+{
+  "scan_id": "0b2e7d51-9a4c-4f38-8e11-77c6d0b4a2f3",
+  "url": "http://expired-cert.example.net/login",
+  "normalized_url": "http://expired-cert.example.net/login",
+  "status": "partial",
+  "created_at": "2026-11-08T12:05:00Z",
+  "completed_at": "2026-11-08T12:05:09Z",
+  "duration_ms": 9020,
+  "risk": {
+    "score": 64,
+    "band": "suspicious",
+    "likelihood": {
+      "score": 0.71,
+      "band": "high",
+      "contributions": [
+        { "engine": "url", "weight": 0.55, "value": 0.8 }
+      ]
+    },
+    "posture": {
+      "score": 35,
+      "grade": "F",
+      "penalties": [
+        { "id": "no-https", "points": 40 },
+        { "id": "csp-missing", "points": 12 }
+      ]
+    },
+    "confidence": {
+      "score": 0.42,
+      "engines_ok": 2,
+      "engines_total": 6,
+      "notes": ["ml: unknown", "tls: error", "intel: skipped (no api key)"]
+    }
+  },
+  "engines": {
+    "ml": {
+      "engine": "ml",
+      "status": "unknown",
+      "findings": [],
+      "evidence": {},
+      "source": "phiUSIIL-xgb@1.0.0",
+      "duration_ms": 5000,
+      "error": "ml service timeout"
+    },
+    "url": {
+      "engine": "url",
+      "status": "ok",
+      "findings": [
+        { "id": "url-no-https", "title": "Plain HTTP", "severity": "high", "detail": null, "evidence_ref": null }
+      ],
+      "evidence": { "scheme": "http" },
+      "source": "heuristic",
+      "duration_ms": 2,
+      "error": null
+    },
+    "tls": {
+      "engine": "tls",
+      "status": "error",
+      "findings": [],
+      "evidence": {},
+      "source": "tls-handshake",
+      "duration_ms": 3000,
+      "error": "handshake failed: certificate expired"
+    },
+    "http": {
+      "engine": "http",
+      "status": "ok",
+      "findings": [],
+      "evidence": { "status": 200, "redirect_chain": [] },
+      "source": "http-fetch",
+      "duration_ms": 210,
+      "error": null
+    },
+    "intel": {
+      "engine": "intel",
+      "status": "skipped",
+      "findings": [],
+      "evidence": {},
+      "source": "none",
+      "duration_ms": 0,
+      "error": "GOOGLE_SAFE_BROWSING_API_KEY not configured"
+    },
+    "community": {
+      "engine": "community",
+      "status": "unknown",
+      "findings": [],
+      "evidence": {},
+      "source": "community",
+      "duration_ms": 0,
+      "error": "not implemented in this milestone"
+    }
+  },
+  "explanation": {
+    "top_factors": [
+      { "feature": "url-no-https", "value": "http", "contribution": 0.2, "direction": "increases_risk", "source": "url" }
+    ],
+    "summary": "Partial result: ML and TLS unavailable. Score reflects only deterministic URL signals and posture."
+  },
+  "evidence": { "redirect_chain": [] }
+}
