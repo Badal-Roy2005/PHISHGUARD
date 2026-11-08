@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Deadline: **10 November 2026**. M0, M1 and M2 are complete and verified locally.
+Deadline: **10 November 2026**. M0, M1, M2, M3, M4, M5B, M6 and M7 are complete and verified locally.
 
 ## Milestones
 
@@ -9,11 +9,11 @@ Deadline: **10 November 2026**. M0, M1 and M2 are complete and verified locally.
 | M0 | Repository and environment foundation | — | done |
 | M1 | Shared types and API contracts | M0 | done |
 | M2 | ML training and inference | M1, dataset | done |
-| M3 | URL analysis engine | M1 | queued |
-| M4 | Isolated scanner + SSRF protection | M3 | queued |
-| M5 | Threat intelligence | M4 | queued |
-| M6 | TLS, CT, HTTP assessment | M4 | queued |
-| M7 | Risk assessment and explainability | M2, M3, M5, M6 | queued |
+| M3 | URL analysis engine | M1 | done |
+| M4 | Isolated scanner + SSRF protection | M3 | done |
+| M5 | Threat intelligence | M4 | done (M5B) |
+| M6 | TLS, CT, HTTP assessment | M4 | done |
+| M7 | Risk assessment and explainability | M2, M3, M5, M6 | done |
 | M8 | Supabase persistence and auth | M1 | queued (needs hosted project) |
 | M9 | Next.js frontend | M7, M8 | queued |
 | M10 | Chrome extension | M9 | queued |
@@ -78,13 +78,74 @@ forbidden (see `AGENTS.md`).
   model or the model through those checks.
 - Every engine reports `status`, `findings`, `evidence`, `source`, `duration`.
 - An unavailable check must propagate `unknown`/`error`, never `safe`.
-- M4 must exist before any outbound fetch, including redirect destinations.
+- M4 must exist before any target-URL fetch, including redirect destinations.
+
+## M5B outcome (done)
+
+- Added Google Safe Browsing v4 and URLhaus adapters behind a common
+  `BaseProvider.lookup(url) -> ProviderResult` interface.
+- Normalized provider states are `match`, `no_match`, `unavailable` and `error`;
+  no-match and failures are never converted to safe.
+- Added bounded timeouts, safe retries (connect/timeout and 500/502/503/504 only),
+  streaming response-size caps, input validation and an in-process TTL cache
+  (Safe Browsing 1 h, URLhaus 6 h).
+- Integrated the `intel` engine into `/internal/analyze`. M7 now consumes the
+  provider states and preserves `match`, `no_match`, `unavailable` and `error`
+  distinctly.
+- Added mocked-provider tests for match, no-match, malformed, timeout, rate
+  limit, auth failure, missing key, response-size, caching/expiry, partial
+  failure and no-safe-conversion behaviour.
+
+## M6 outcome (done)
+
+- Extended the M4 scanner to enforce ports 80/443 and reject URL credentials,
+  capture TLS protocol/cipher/certificate evidence, preserve certificate
+  verification failures as evidence, retain duplicate `Set-Cookie` headers, and
+  fetch each redirect hop exactly once.
+- Added deterministic `tls_assessment.py`, `http_security.py` and
+  `certificate_transparency.py` modules. TLS findings cover untrusted, expired,
+  not-yet-valid, expiring and weak-protocol/cipher certificates. HTTP findings
+  cover HTTPS use, HSTS, CSP, clickjacking, MIME sniffing, referrer/permissions
+  policy, version disclosure and cookie flags.
+- Added `app/transport.py`, which consumes scanner evidence once and returns
+  contract-valid `tls` and `http` engine reports. CT is flag-gated, bounded by
+  timeout/size/record count, and folds into the TLS engine as `partial` when it
+  is requested but unavailable.
+- `/internal/analyze` runs URL + transport + intel engines. M7 adds the risk
+  assessment and explanation on top of those engine reports.
+- Added mocked/fake-transport tests only; no live target, CT endpoint or
+  malicious site is contacted.
+
+## M7 outcome (done)
+
+- Added deterministic `risk_assessment.py` with provisional weights
+  `intel=35, url=15, brand=15, redirect=10, tls=15, http=10` and bands
+  `low=0–19`, `guarded=20–39`, `suspicious=40–69`, `high=70–100`.
+- Produces four separate outputs: aggregate risk, threat likelihood, security
+  posture and evidence confidence. ML probability is reported separately and is
+  never added to the heuristic score.
+- Every contributing factor has a stable `reason_code`, source, observed value,
+  contribution, maximum contribution, direction, severity and status. Missing
+  evidence appears as an explicit unavailable/error factor.
+- Coverage-aware publishing: `score = null` and `band = insufficient_evidence`
+  when evidence is insufficient; `low` additionally requires at least 75%
+  coverage. A strong positive match can still score below the normal coverage
+  threshold.
+- Redirect evidence is read once from sanitized `transport.redirect_chain`.
+  HTTP skips `http_not_https` and `http_insecure_redirect`, and TLS
+  `tls_not_used` maps to the redirect contribution, so correlated signals are
+  not double-counted.
+- `/internal/analyze` now returns `status = "partial"` while any engine is not
+  `ok`, with a real `risk` object and `explanation`. Brand evidence is
+  unavailable in M7, so coverage tops out below 100%.
+- Added 24 risk tests covering weights, bands, thresholds, coverage, reason
+  codes, strong positives, ML separation, redirect handling and determinism.
 
 ## Cannot realistically ship by 10 Nov 2026
 
 - Full leakage audit depth (near-duplicate clustering, temporal checks).
 - Three-model comparison with calibration.
-- Certificate Transparency with caching and rate-limit handling.
+- Shared Certificate Transparency cache and provider-specific backoff tuning.
 - Verified RLS suite (no Docker/Podman/Postgres locally; needs a hosted project).
 - Community moderation UI.
 - Chrome Web Store packaging.

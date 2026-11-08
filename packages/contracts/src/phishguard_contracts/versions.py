@@ -3,7 +3,7 @@
 SERVICE_VERSION = "0.1.0"
 
 #: Bump on any breaking wire change, together with docs/api-contracts.md.
-CONTRACT_VERSION = "2026-11-09.1"
+CONTRACT_VERSION = "2026-11-09.2"
 
 SCHEMA_VERSION = 1
 

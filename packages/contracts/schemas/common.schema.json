@@ -49,6 +49,7 @@
       "type": "string",
       "enum": [
         "low",
+        "guarded",
         "suspicious",
         "high",
         "critical",
@@ -216,6 +217,7 @@
           "type": "string",
           "enum": [
             "low",
+            "guarded",
             "suspicious",
             "high",
             "critical"
@@ -261,6 +263,7 @@
       "required": [
         "score",
         "grade",
+        "status",
         "penalties"
       ],
       "properties": {
@@ -285,6 +288,9 @@
           "items": {
             "$ref": "#/$defs/PosturePenalty"
           }
+        },
+        "status": {
+          "$ref": "#/$defs/EngineStatus"
         }
       }
     },
@@ -294,7 +300,10 @@
       "required": [
         "score",
         "engines_ok",
-        "engines_total"
+        "engines_total",
+        "covered_weight",
+        "total_weight",
+        "incomplete"
       ],
       "properties": {
         "score": {
@@ -319,6 +328,27 @@
             "maxLength": 256
           },
           "maxItems": 20
+        },
+        "covered_weight": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "total_weight": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "incomplete": {
+          "type": "boolean"
+        },
+        "missing_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 20
         }
       }
     },
@@ -328,9 +358,14 @@
       "required": [
         "score",
         "band",
+        "verdict",
+        "incomplete",
         "likelihood",
         "posture",
-        "confidence"
+        "confidence",
+        "factors",
+        "reason_codes",
+        "policy"
       ],
       "properties": {
         "score": {
@@ -353,6 +388,42 @@
         },
         "confidence": {
           "$ref": "#/$defs/ConfidenceScore"
+        },
+        "verdict": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "incomplete": {
+          "type": "boolean"
+        },
+        "factors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RiskFactor"
+          },
+          "maxItems": 100
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "maxItems": 100
+        },
+        "model_probability": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/ModelProbability"
+            }
+          ]
+        },
+        "policy": {
+          "$ref": "#/$defs/RiskPolicyMetadata"
         }
       }
     },
@@ -672,6 +743,274 @@
             "$ref": "#/$defs/FeatureContractEntry"
           },
           "minItems": 1
+        }
+      }
+    },
+    "RiskFactor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason_code",
+        "category",
+        "source",
+        "contribution",
+        "max_contribution",
+        "direction",
+        "severity",
+        "explanation",
+        "status"
+      ],
+      "properties": {
+        "reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9_.:-]+$"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "intel",
+            "url",
+            "brand",
+            "redirect",
+            "tls",
+            "http",
+            "ml"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/EngineName"
+        },
+        "observed": {
+          "type": [
+            "number",
+            "string",
+            "boolean",
+            "null"
+          ]
+        },
+        "contribution": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "max_contribution": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "increases_risk",
+            "decreases_risk",
+            "informational"
+          ]
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "explanation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "evidence_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "applied",
+            "evaluated",
+            "no_match",
+            "unavailable",
+            "error"
+          ]
+        }
+      }
+    },
+    "RiskWeights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "intel",
+        "url",
+        "brand",
+        "redirect",
+        "tls",
+        "http"
+      ],
+      "properties": {
+        "intel": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "url": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "brand": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "redirect": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "tls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "http": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "description": "Provisional heuristic weights. They must sum to 100 in the Python model."
+    },
+    "RiskBandRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "band",
+        "min_score",
+        "max_score"
+      ],
+      "properties": {
+        "band": {
+          "type": "string",
+          "enum": [
+            "low",
+            "guarded",
+            "suspicious",
+            "high"
+          ]
+        },
+        "min_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "max_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "RiskPolicyMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "calibrated",
+        "weights",
+        "bands",
+        "min_coverage_for_score",
+        "min_coverage_for_low"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "calibrated": {
+          "type": "boolean",
+          "const": false
+        },
+        "weights": {
+          "$ref": "#/$defs/RiskWeights"
+        },
+        "bands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RiskBandRange"
+          },
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "min_coverage_for_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "min_coverage_for_low": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "maxItems": 20
+        }
+      }
+    },
+    "ModelProbability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "probability_phishing",
+        "label",
+        "status",
+        "calibrated",
+        "used_in_risk_score",
+        "source"
+      ],
+      "properties": {
+        "probability_phishing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "label": {
+          "type": "string",
+          "enum": [
+            "phishing",
+            "legitimate",
+            "unknown"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "partial",
+            "unknown"
+          ]
+        },
+        "model_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "calibrated": {
+          "type": "boolean"
+        },
+        "used_in_risk_score": {
+          "const": false
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
         }
       }
     }

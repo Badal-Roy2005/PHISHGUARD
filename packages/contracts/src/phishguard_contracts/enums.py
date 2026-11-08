@@ -3,7 +3,14 @@ from typing import Literal, get_args
 ScanStatus = Literal["queued", "running", "complete", "partial", "failed"]
 EngineStatus = Literal["ok", "partial", "skipped", "unknown", "error"]
 Severity = Literal["info", "low", "medium", "high", "critical"]
-RiskBand = Literal["low", "suspicious", "high", "critical", "insufficient_evidence"]
+RiskBand = Literal[
+    "low",
+    "guarded",
+    "suspicious",
+    "high",
+    "critical",
+    "insufficient_evidence",
+]
 EngineName = Literal["ml", "url", "tls", "http", "intel", "community"]
 ErrorCode = Literal[
     "invalid_request",

@@ -2,19 +2,23 @@
 
 ## Repository status (read first)
 
-Milestones **M0 and M1 are implemented**; M2+ are not. What exists today:
+Milestones **M0 through M7 are implemented**; M8+ are not. What exists today:
 
 - `packages/contracts` — JSON Schemas, Pydantic models, TS types/validators, fixtures
 - `services/analysis` — FastAPI app factory, env validation, health/version,
-  contract-validated `/internal/analyze` that returns **501** (no orchestration yet)
-- `services/ml` — same bootstrap; `/predict` returns **503** (no model yet)
+  M3 deterministic URL engine, M4 isolated scanner, M5B Google Safe Browsing and
+  URLhaus adapters, M6 TLS/HTTP/CT assessment, M7 deterministic risk
+  assessment; `/internal/analyze` runs url + tls + http + intel and returns a
+  policy-versioned risk assessment with explicit incomplete coverage
+- `services/ml` — M2 model training artifacts and `/predict` inference
 - `apps/web` — minimal Next.js 16 shell that imports the contracts package
 - `docs/` — architecture, roadmap, contracts, DB design, security, ML contract,
-  testing, deployment
+  threat intelligence, transport security, risk assessment, testing, deployment
 
-Do not assume engines, the scanner, scoring, Supabase migrations, the extension or
-the dashboard exist. Only `packages/contracts` describes the wire format; treat
-`docs/api-contracts.md` and the schemas as authoritative over prose elsewhere.
+Do not assume Supabase migrations (M8), the extension (M10) or the dashboard
+exist. Only
+`packages/contracts` describes the wire format; treat `docs/api-contracts.md` and
+the schemas as authoritative over prose elsewhere.
 
 ## Commands (verified)
 
@@ -49,12 +53,26 @@ Run a single Python test:
   shape, update schema + Pydantic + TS + fixture + `docs/api-contracts.md` together;
   bump `CONTRACT_VERSION` on breaking changes.
 - `apps/web` must never fetch a target URL, and `services/ml` must never do network
-  I/O or hold DB credentials. All outbound scanning belongs to
-  `services/analysis/scanner` (M4).
+  I/O or hold DB credentials. All target-URL fetches belong to
+  `services/analysis/scanner` (M4). Threat-intel lookups use fixed provider
+  endpoints in `services/analysis/threat_intel.py` (M5B).
 - There is **no Docker, no Podman, no local Postgres**. `supabase start` cannot run.
   Migrations can only be applied to a hosted Supabase project (M8).
-- **No model exists yet.** `/predict` returns 503 by design. Do not fabricate metrics;
-  the deck's numbers are targets, not results.
+- M2 model artifacts exist and `/predict` serves the selected `live` XGBoost model.
+  Report only metrics recorded in `services/ml/artifacts/metrics.json`; do not
+  fabricate or round them up.
+- M5B provider state is `match | no_match | unavailable | error`. A no-match or a
+  provider failure is never a safe verdict. See `docs/threat-intelligence.md`.
+- M6 calls the scanner exactly once per scan; TLS and HTTP assessment consume its
+  evidence. CT is off by default (`CT_ENABLED=false`), uses the fixed crt.sh
+  endpoint, and a requested CT failure makes the `tls` engine `partial`. See
+  `docs/transport-security.md`.
+- M7 scoring is deterministic and policy-versioned (`m7-2026-11-09.2`). Its
+  weights and bands are provisional, uncalibrated heuristics, not probabilities.
+  Brand-impersonation evidence is unavailable in M7. ML probability is reported
+  separately and never enters the heuristic score. Missing evidence reduces
+  coverage and can yield `score = null`; it is never treated as benign. See
+  `docs/risk-assessment.md`.
 - The PhiUSIIL CSV sits at the repo root and is gitignored. Verified shape:
   235,795 rows × 56 columns (`FILENAME`, `URL`, 53 features, `label`).
   **`0 = phishing`, `1 = legitimate`.** About 29 of the 53 features are page-content
@@ -68,7 +86,7 @@ An end-to-end phishing-defense platform: phishing detection, malicious-URL intel
 TLS certificate inspection, website security assessment, collaborative threat reporting,
 and a Chrome extension. It is a multi-engine system, not a single classifier.
 
-Intended stack (only the M0/M1 parts are installed so far):
+Intended stack (only the M0-M5B parts are installed so far):
 
 - Next.js 16 + TypeScript + Tailwind CSS 4 + shadcn/ui; backend via Route Handlers
 - Python/FastAPI ML service: pandas, NumPy, scikit-learn, XGBoost, SHAP

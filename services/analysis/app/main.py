@@ -1,8 +1,10 @@
 """PHISHGUARD analysis API.
 
 M0/M1 scope: process bootstrap, configuration validation, health/version
-endpoints, contract-validated request intake. Engines and orchestration land in
-M3-M7; until then `/internal/analyze` returns 501 rather than a fake verdict.
+endpoints, contract-validated request intake. M6 wires the isolated scanner's
+TLS and HTTP evidence plus the threat-intelligence engine into
+`/internal/analyze`; engines that do not exist yet and M7 risk aggregation are
+reported explicitly as unavailable, never as safe.
 """
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, Header, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -24,6 +27,7 @@ from phishguard_contracts import (
 )
 from pydantic import BaseModel, Field
 
+from .orchestration import build_scan_result
 from .settings import ConfigError, Settings, load_settings, redacted_summary
 
 logger = logging.getLogger("phishguard.analysis")
@@ -135,16 +139,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return redacted_summary(resolved)
 
     @app.post("/internal/analyze", dependencies=[Depends(require_service_token)])
-    async def analyze(payload: ScanRequest, request: Request) -> JSONResponse:
-        # M3 replaces this handler with real orchestration. Until then the request
-        # is validated (scheme, length, credentials, localhost) and explicitly
-        # refused -- never a fabricated verdict, never a fetch.
-        return _error(
-            501,
-            "internal",
-            "Scan orchestration is not implemented yet (milestone M3).",
-            getattr(request.state, "request_id", None),
-        )
+    async def analyze(payload: ScanRequest) -> JSONResponse:
+        # The request is contract-validated before any engine runs. M6 executes
+        # the URL, transport (TLS/HTTP) and threat-intelligence engines; the
+        # result is explicitly `failed` because M7 risk aggregation is absent.
+        result = await run_in_threadpool(build_scan_result, payload, resolved)
+        return JSONResponse(status_code=200, content=result.model_dump(mode="json"))
 
     return app
 

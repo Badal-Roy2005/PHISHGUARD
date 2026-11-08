@@ -18,6 +18,10 @@ __pycache__/
 dist/
 build/
 
+# supabase local state
+.supabase/
+supabase/.temp/
+
 # env / secrets
 .env
 .env.*

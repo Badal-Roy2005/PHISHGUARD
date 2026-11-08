@@ -55,8 +55,24 @@ INTERNAL_SERVICE_TOKEN
 ALLOWED_ORIGINS=https://<vercel-domain>
 GOOGLE_SAFE_BROWSING_API_KEY
 URLHAUS_API_KEY
+INTEL_HTTP_TIMEOUT_SECONDS=5
+INTEL_MAX_RESPONSE_BYTES=256000
+INTEL_MAX_RETRIES=1
+INTEL_CACHE_ENABLED=true
+INTEL_SAFE_BROWSING_CACHE_TTL_SECONDS=3600
+INTEL_URLHAUS_CACHE_TTL_SECONDS=21600
+CT_ENABLED=false
+CT_TIMEOUT_SECONDS=5
+CT_MAX_RESPONSE_BYTES=1000000
+CT_MAX_RECORDS=1000
 MAX_CONCURRENT_SCANS=8
 ```
+
+See `docs/threat-intelligence.md` for provider setup, quota semantics and the
+`match`/`no_match`/`unavailable`/`error` model. See
+`docs/transport-security.md` for TLS, HTTP-header and CT semantics. Missing
+provider keys or a disabled CT flag are not startup failures; they produce
+`skipped`/`unavailable`, never `safe`.
 
 `services/ml`:
 

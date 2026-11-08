@@ -16,9 +16,13 @@ if str(_svc_analysis) not in sys.path:
 
 from scanner import (  # noqa: E402
     DNSResolutionEvidence,
+    PinnedDNSResolver,
+    PinnedHTTPTransport,
     ScanResult,
     analyze_redirects_passive,
+    build_tls_information,
     extract_url_components,
+    follow_redirects_with_validation,
     is_rejected_address,
     scan_url,
     validate_dns_answers,
@@ -221,3 +225,123 @@ def test_ml_feature_compatibility() -> None:
     assert ml_features["IsHTTPS"] is False
     assert ml_features["URLLength"] > 0
     assert ml_features["DomainLength"] > 0
+
+def test_validate_url_rejects_credentials_and_disallowed_ports() -> None:
+    assert validate_url_scheme("https://user:pass@example.com/")[0] is False
+    assert validate_url_scheme("https://example.com:8443/")[0] is False
+    assert validate_url_scheme("https://example.com:99999/")[0] is False
+    assert validate_url_scheme("https://example.com:443/")[0] is True
+
+
+def test_build_tls_information_is_json_safe() -> None:
+    class FakeSocket:
+        def cipher(self):
+            return ("TLS_AES_256_GCM_SHA384", "TLSv1.3", 256)
+
+        def version(self):
+            return "TLSv1.3"
+
+        def selected_alpn_protocol(self):
+            return "h2"
+
+        def getpeercert(self):
+            return {
+                "subject": ((("commonName", "example.com"),),),
+                "issuer": ((("commonName", "Example CA"),),),
+                "notBefore": "Nov  1 00:00:00 2026 GMT",
+                "notAfter": "Nov  1 00:00:00 2027 GMT",
+                "subjectAltName": (("DNS", "example.com"),),
+            }
+
+    info = build_tls_information(FakeSocket(), "example.com")
+
+    assert info["verified"] is True
+    assert info["protocol"] == "TLSv1.3"
+    assert info["cipher"]["bits"] == 256
+    assert info["certificate"]["subject"][0][0][0] == "commonName"
+
+
+def test_follow_redirects_propagates_tls_evidence(monkeypatch) -> None:
+    def fake_resolve(self):
+        return DNSResolutionEvidence(
+            hostname=self.hostname,
+            requested_addresses=["93.184.216.34"],
+            resolved_addresses=["93.184.216.34"],
+            rejected_addresses=[],
+            resolution_successful=True,
+        )
+
+    def fake_fetch(self, url, resolver):
+        return {
+            "success": True,
+            "http_status": 200,
+            "final_url": url,
+            "redirect_location": None,
+            "content_type": "text/html",
+            "html_title": "Example",
+            "response_headers": {"Strict-Transport-Security": "max-age=31536000"},
+            "set_cookie_headers": ["a=1; Secure"],
+            "tls_information": {"verified": True, "protocol": "TLSv1.3"},
+            "body": b"ok",
+            "duration_ms": 1.0,
+        }
+
+    monkeypatch.setattr(PinnedDNSResolver, "resolve_and_validate", fake_resolve)
+    monkeypatch.setattr(PinnedHTTPTransport, "fetch", fake_fetch)
+
+    result, chain, error = follow_redirects_with_validation("https://example.com/")
+
+    assert error is None
+    assert chain == ["https://example.com/"]
+    assert result["tls_information"]["protocol"] == "TLSv1.3"
+    assert result["set_cookie_headers"] == ["a=1; Secure"]
+
+
+def test_follow_redirects_preserves_tls_failure_evidence(monkeypatch) -> None:
+    def fake_resolve(self):
+        return DNSResolutionEvidence(
+            hostname=self.hostname,
+            requested_addresses=["93.184.216.34"],
+            resolved_addresses=["93.184.216.34"],
+            rejected_addresses=[],
+            resolution_successful=True,
+        )
+
+    def fake_fetch(self, url, resolver):
+        return {
+            "success": False,
+            "final_url": url,
+            "tls_information": {
+                "verified": False,
+                "protocol": None,
+                "certificate": None,
+                "error": "certificate verify failed",
+            },
+            "error": "TLS certificate verification failed",
+        }
+
+    monkeypatch.setattr(PinnedDNSResolver, "resolve_and_validate", fake_resolve)
+    monkeypatch.setattr(PinnedHTTPTransport, "fetch", fake_fetch)
+
+    result, chain, error = follow_redirects_with_validation("https://example.com/")
+
+    assert error == "TLS certificate verification failed"
+    assert result["tls_information"]["verified"] is False
+    assert chain == ["https://example.com/"]
+
+
+def test_loopback_override_is_explicit_and_test_only() -> None:
+    assert is_rejected_address("127.0.0.1", "ipv4") is True
+    assert is_rejected_address("127.0.0.1", "ipv4", allow_loopback=True) is False
+    evidence = validate_dns_answers(
+        "localhost",
+        ["127.0.0.1"],
+        allow_loopback=True,
+    )
+    assert evidence.resolution_successful is True
+
+
+def test_loopback_override_allows_a_test_server_port() -> None:
+    assert validate_url_scheme("http://127.0.0.1:8000/")[0] is False
+    assert validate_url_scheme("http://127.0.0.1:8000/", allow_loopback=True)[0] is True
+    assert validate_url_scheme("https://example.com:8443/", allow_loopback=True)[0] is False

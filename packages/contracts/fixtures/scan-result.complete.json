@@ -7,30 +7,220 @@
   "completed_at": "2026-11-08T12:00:04Z",
   "duration_ms": 4120,
   "risk": {
-    "score": 78,
+    "score": 83,
     "band": "high",
+    "verdict": "High risk.",
+    "incomplete": false,
     "likelihood": {
-      "score": 0.82,
-      "band": "high",
+      "score": 1.0,
+      "band": "critical",
       "contributions": [
-        { "engine": "ml", "weight": 0.45, "value": 0.91 },
-        { "engine": "url", "weight": 0.35, "value": 0.78 },
-        { "engine": "intel", "weight": 0.2, "value": 0.6 }
+        {
+          "engine": "intel",
+          "weight": 0.4667,
+          "value": 1.0,
+          "note": "intel coverage=100%"
+        },
+        {
+          "engine": "url",
+          "weight": 0.2,
+          "value": 1.0,
+          "note": "url coverage=100%"
+        },
+        {
+          "engine": "url",
+          "weight": 0.2,
+          "value": 1.0,
+          "note": "brand coverage=100%"
+        },
+        {
+          "engine": "http",
+          "weight": 0.1333,
+          "value": 1.0,
+          "note": "redirect coverage=100%"
+        }
       ]
     },
     "posture": {
-      "score": 42,
+      "score": 68,
       "grade": "D",
+      "status": "ok",
       "penalties": [
-        { "id": "hsts-missing", "points": 8 },
-        { "id": "csp-missing", "points": 12 }
+        {
+          "id": "tls_finding_tls_short_validity",
+          "points": 12,
+          "note": "The certificate expires soon."
+        },
+        {
+          "id": "http_finding_hsts_missing",
+          "points": 20,
+          "note": "Strict-Transport-Security is absent."
+        }
       ]
     },
     "confidence": {
-      "score": 0.86,
-      "engines_ok": 5,
+      "score": 1.0,
+      "engines_ok": 6,
       "engines_total": 6,
-      "notes": ["community: no reports yet"]
+      "covered_weight": 100,
+      "total_weight": 100,
+      "incomplete": false,
+      "missing_evidence": [],
+      "notes": [
+        "policy=m7-2026-11-09.2; calibrated=false",
+        "ML probability is reported separately and is not part of the risk score."
+      ]
+    },
+    "factors": [
+      {
+        "reason_code": "intel_confirmed_match",
+        "category": "intel",
+        "source": "intel",
+        "observed": "google_safe_browsing, urlhaus",
+        "contribution": 35,
+        "max_contribution": 35,
+        "direction": "increases_risk",
+        "severity": "high",
+        "explanation": "At least one threat-intelligence provider reported a match.",
+        "evidence_ref": "intel.providers",
+        "status": "applied"
+      },
+      {
+        "reason_code": "url_finding_url_suspicious_keywords",
+        "category": "url",
+        "source": "url",
+        "observed": "secure, login, verify",
+        "contribution": 15,
+        "max_contribution": 15,
+        "direction": "increases_risk",
+        "severity": "critical",
+        "explanation": "Credential-related keywords appear in the URL.",
+        "evidence_ref": "url.keywords",
+        "status": "applied"
+      },
+      {
+        "reason_code": "brand_impersonation_confirmed",
+        "category": "brand",
+        "source": "url",
+        "observed": "Example Bank",
+        "contribution": 15,
+        "max_contribution": 15,
+        "direction": "increases_risk",
+        "severity": "high",
+        "explanation": "Upstream evidence confirms brand impersonation.",
+        "evidence_ref": "brand.match",
+        "status": "applied"
+      },
+      {
+        "reason_code": "redirect_chain_length",
+        "category": "redirect",
+        "source": "http",
+        "observed": 5,
+        "contribution": 10,
+        "max_contribution": 10,
+        "direction": "increases_risk",
+        "severity": "high",
+        "explanation": "The chain has 5 redirect hops.",
+        "evidence_ref": "transport.redirect_chain",
+        "status": "applied"
+      },
+      {
+        "reason_code": "tls_finding_tls_short_validity",
+        "category": "tls",
+        "source": "tls",
+        "observed": "30 days remaining",
+        "contribution": 3,
+        "max_contribution": 3,
+        "direction": "increases_risk",
+        "severity": "low",
+        "explanation": "The certificate expires soon.",
+        "evidence_ref": "tls.days_remaining",
+        "status": "applied"
+      },
+      {
+        "reason_code": "http_finding_hsts_missing",
+        "category": "http",
+        "source": "http",
+        "observed": "Strict-Transport-Security missing",
+        "contribution": 5,
+        "max_contribution": 5,
+        "direction": "increases_risk",
+        "severity": "medium",
+        "explanation": "Strict-Transport-Security is absent.",
+        "evidence_ref": "http.headers",
+        "status": "applied"
+      },
+      {
+        "reason_code": "ml_probability_informational",
+        "category": "ml",
+        "source": "ml",
+        "observed": 0.91,
+        "contribution": 0,
+        "max_contribution": 0,
+        "direction": "informational",
+        "severity": "info",
+        "explanation": "ML phishing probability is reported separately and is not included in the heuristic risk score.",
+        "evidence_ref": "ml.probability_phishing",
+        "status": "evaluated"
+      }
+    ],
+    "reason_codes": [
+      "intel_confirmed_match",
+      "url_finding_url_suspicious_keywords",
+      "brand_impersonation_confirmed",
+      "redirect_chain_length",
+      "tls_finding_tls_short_validity",
+      "http_finding_hsts_missing",
+      "ml_probability_informational"
+    ],
+    "model_probability": {
+      "probability_phishing": 0.91,
+      "label": "phishing",
+      "status": "ok",
+      "model_version": "1.0.0",
+      "calibrated": false,
+      "used_in_risk_score": false,
+      "source": "phiUSIIL-xgb@1.0.0"
+    },
+    "policy": {
+      "version": "m7-2026-11-09.2",
+      "calibrated": false,
+      "weights": {
+        "intel": 35,
+        "url": 15,
+        "brand": 15,
+        "redirect": 10,
+        "tls": 15,
+        "http": 10
+      },
+      "bands": [
+        {
+          "band": "low",
+          "min_score": 0,
+          "max_score": 19
+        },
+        {
+          "band": "guarded",
+          "min_score": 20,
+          "max_score": 39
+        },
+        {
+          "band": "suspicious",
+          "min_score": 40,
+          "max_score": 69
+        },
+        {
+          "band": "high",
+          "min_score": 70,
+          "max_score": 100
+        }
+      ],
+      "min_coverage_for_score": 0.5,
+      "min_coverage_for_low": 0.75,
+      "notes": [
+        "Weights and bands are provisional heuristics, not calibrated probabilities.",
+        "Brand-impersonation evidence is unavailable until a brand engine exists."
+      ]
     }
   },
   "engines": {
@@ -38,9 +228,18 @@
       "engine": "ml",
       "status": "ok",
       "findings": [
-        { "id": "ml-high-probability", "title": "Model classifies as phishing", "severity": "high", "detail": "p=0.91", "evidence_ref": "ml.contributions" }
+        {
+          "id": "ml-high-probability",
+          "title": "Model classifies as phishing",
+          "severity": "high",
+          "detail": "p=0.91",
+          "evidence_ref": "ml.contributions"
+        }
       ],
-      "evidence": { "probability_phishing": 0.91, "model": "phiUSIIL-xgb@1.0.0" },
+      "evidence": {
+        "probability_phishing": 0.91,
+        "model": "phiUSIIL-xgb@1.0.0"
+      },
       "source": "phiUSIIL-xgb@1.0.0",
       "duration_ms": 42,
       "error": null
@@ -49,9 +248,22 @@
       "engine": "url",
       "status": "ok",
       "findings": [
-        { "id": "url-suspicious-keywords", "title": "Credential-related keywords in URL", "severity": "medium", "detail": "secure, login, verify", "evidence_ref": "url.keywords" }
+        {
+          "id": "url-suspicious-keywords",
+          "title": "Credential-related keywords in URL",
+          "severity": "medium",
+          "detail": "secure, login, verify",
+          "evidence_ref": "url.keywords"
+        }
       ],
-      "evidence": { "keywords": ["secure", "login", "verify"], "host": "secure-update-login.example.com" },
+      "evidence": {
+        "keywords": [
+          "secure",
+          "login",
+          "verify"
+        ],
+        "host": "secure-update-login.example.com"
+      },
       "source": "heuristic",
       "duration_ms": 2,
       "error": null
@@ -60,9 +272,19 @@
       "engine": "tls",
       "status": "ok",
       "findings": [
-        { "id": "tls-short-validity", "title": "Certificate valid for 30 days", "severity": "low", "detail": "30 days remaining", "evidence_ref": "tls.days_remaining" }
+        {
+          "id": "tls-short-validity",
+          "title": "Certificate valid for 30 days",
+          "severity": "low",
+          "detail": "30 days remaining",
+          "evidence_ref": "tls.days_remaining"
+        }
       ],
-      "evidence": { "issuer": "Example CA", "days_remaining": 30, "self_signed": false },
+      "evidence": {
+        "issuer": "Example CA",
+        "days_remaining": 30,
+        "self_signed": false
+      },
       "source": "tls-handshake",
       "duration_ms": 310,
       "error": null
@@ -71,9 +293,21 @@
       "engine": "http",
       "status": "ok",
       "findings": [
-        { "id": "hsts-missing", "title": "Strict-Transport-Security missing", "severity": "medium", "detail": null, "evidence_ref": "http.headers" }
+        {
+          "id": "hsts-missing",
+          "title": "Strict-Transport-Security missing",
+          "severity": "medium",
+          "detail": null,
+          "evidence_ref": "http.headers"
+        }
       ],
-      "evidence": { "status": 200, "redirect_chain": [], "headers": { "content-type": "text/html" } },
+      "evidence": {
+        "status": 200,
+        "redirect_chain": [],
+        "headers": {
+          "content-type": "text/html"
+        }
+      },
       "source": "http-fetch",
       "duration_ms": 240,
       "error": null
@@ -82,9 +316,25 @@
       "engine": "intel",
       "status": "ok",
       "findings": [
-        { "id": "intel-safebrowsing-hit", "title": "Listed by Google Safe Browsing", "severity": "critical", "detail": "SOCIAL_ENGINEERING", "evidence_ref": "intel.safebrowsing" }
+        {
+          "id": "intel-safebrowsing-hit",
+          "title": "Listed by Google Safe Browsing",
+          "severity": "critical",
+          "detail": "SOCIAL_ENGINEERING",
+          "evidence_ref": "intel.safebrowsing"
+        }
       ],
-      "evidence": { "safebrowsing": { "matched": true, "threat_types": ["SOCIAL_ENGINEERING"] }, "urlhaus": { "matched": false } },
+      "evidence": {
+        "safebrowsing": {
+          "matched": true,
+          "threat_types": [
+            "SOCIAL_ENGINEERING"
+          ]
+        },
+        "urlhaus": {
+          "matched": false
+        }
+      },
       "source": "safebrowsing+urlhaus",
       "duration_ms": 180,
       "error": null
@@ -93,7 +343,10 @@
       "engine": "community",
       "status": "ok",
       "findings": [],
-      "evidence": { "report_count": 0, "vote_count": 0 },
+      "evidence": {
+        "report_count": 0,
+        "vote_count": 0
+      },
       "source": "community",
       "duration_ms": 12,
       "error": null
@@ -101,15 +354,45 @@
   },
   "explanation": {
     "top_factors": [
-      { "feature": "TLDLegitimateProb", "value": 0.11, "contribution": 0.18, "direction": "increases_risk", "source": "ml" },
-      { "feature": "tls-short-validity", "value": 30, "contribution": 0.05, "direction": "increases_risk", "source": "tls" },
-      { "feature": "url-suspicious-keywords", "value": 3, "contribution": 0.09, "direction": "increases_risk", "source": "url" }
+      {
+        "feature": "intel_confirmed_match",
+        "value": "google_safe_browsing, urlhaus",
+        "contribution": 35.0,
+        "direction": "increases_risk",
+        "source": "intel"
+      },
+      {
+        "feature": "url_finding_url_suspicious_keywords",
+        "value": "secure, login, verify",
+        "contribution": 15.0,
+        "direction": "increases_risk",
+        "source": "url"
+      },
+      {
+        "feature": "brand_impersonation_confirmed",
+        "value": "Example Bank",
+        "contribution": 15.0,
+        "direction": "increases_risk",
+        "source": "url"
+      },
+      {
+        "feature": "redirect_chain_length",
+        "value": 5,
+        "contribution": 10.0,
+        "direction": "increases_risk",
+        "source": "http"
+      }
     ],
-    "summary": "Model probability 0.91 with credential-harvesting keywords and a young certificate."
+    "summary": "High risk."
   },
   "evidence": {
     "redirect_chain": [],
-    "tls": { "issuer": "Example CA", "days_remaining": 30 },
-    "headers": { "content-type": "text/html" }
+    "tls": {
+      "issuer": "Example CA",
+      "days_remaining": 30
+    },
+    "headers": {
+      "content-type": "text/html"
+    }
   }
 }

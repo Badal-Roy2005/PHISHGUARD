@@ -51,6 +51,7 @@ export interface PosturePenalty {
 export interface PostureScore {
   score: number;
   grade: "A" | "B" | "C" | "D" | "F" | "unknown";
+  status: EngineStatus;
   penalties: PosturePenalty[];
 }
 
@@ -58,15 +59,90 @@ export interface ConfidenceScore {
   score: number;
   engines_ok: number;
   engines_total: number;
+  covered_weight: number;
+  total_weight: number;
+  incomplete: boolean;
+  missing_evidence?: string[];
   notes?: string[];
+}
+
+export type RiskFactorCategory =
+  | "intel"
+  | "url"
+  | "brand"
+  | "redirect"
+  | "tls"
+  | "http"
+  | "ml";
+
+export type RiskFactorStatus =
+  | "applied"
+  | "evaluated"
+  | "no_match"
+  | "unavailable"
+  | "error";
+
+export interface RiskFactor {
+  reason_code: string;
+  category: RiskFactorCategory;
+  source: EngineName;
+  observed?: number | string | boolean | null;
+  contribution: number;
+  max_contribution: number;
+  direction: "increases_risk" | "decreases_risk" | "informational";
+  severity: Severity;
+  explanation: string;
+  evidence_ref?: string | null;
+  status: RiskFactorStatus;
+}
+
+export interface RiskWeights {
+  intel: number;
+  url: number;
+  brand: number;
+  redirect: number;
+  tls: number;
+  http: number;
+}
+
+export interface RiskBandRange {
+  band: "low" | "guarded" | "suspicious" | "high";
+  min_score: number;
+  max_score: number;
+}
+
+export interface RiskPolicyMetadata {
+  version: string;
+  calibrated: boolean;
+  weights: RiskWeights;
+  bands: RiskBandRange[];
+  min_coverage_for_score: number;
+  min_coverage_for_low: number;
+  notes?: string[];
+}
+
+export interface ModelProbability {
+  probability_phishing: number;
+  label: "phishing" | "legitimate" | "unknown";
+  status: "ok" | "partial" | "unknown";
+  model_version?: string | null;
+  calibrated: boolean;
+  used_in_risk_score: false;
+  source: string;
 }
 
 export interface RiskAssessment {
   score: number | null;
   band: RiskBand;
+  verdict: string;
+  incomplete: boolean;
   likelihood: LikelihoodScore;
   posture: PostureScore;
   confidence: ConfidenceScore;
+  factors?: RiskFactor[];
+  reason_codes?: string[];
+  model_probability?: ModelProbability | null;
+  policy: RiskPolicyMetadata;
 }
 
 export interface ExplanationFactor {

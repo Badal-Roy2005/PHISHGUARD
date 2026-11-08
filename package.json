@@ -15,6 +15,7 @@
     "lint:py": "bash scripts/lint-python.sh",
     "test": "pnpm -r --if-present test",
     "test:py": "bash scripts/test-python.sh",
+    "test:rls": "bash scripts/test-rls.sh",
     "verify": "bash scripts/verify.sh"
   },
   "devDependencies": {
