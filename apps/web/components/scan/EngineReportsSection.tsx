@@ -4,52 +4,56 @@ import type { Engines } from "@phishguard/contracts";
 
 import { EngineDetail } from "./EngineDetail";
 
-import { engineStatusColor, engineStatusLabel, formatDuration } from "@/lib/ui-utils";
+import { formatDuration } from "@/lib/ui-utils";
 
 export function EngineReportsSection({ engines }: { engines: Engines }) {
   const engineEntries = ["ml", "url", "tls", "http", "intel", "community"]
-    .filter((e): e is "ml" | "url" | "tls" | "http" | "intel" | "community" => e in engines)
+    .filter((e): e is keyof Engines => e in engines)
     .map((e) => engines[e]);
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-sm font-medium uppercase tracking-wider text-slate-400">Engine Reports</h2>
-      <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase tracking-wider text-slate-500 border-b border-slate-800">
-                <th className="pb-2 pr-4">Engine</th>
-                <th className="pb-2 pr-4">Status</th>
-                <th className="pb-2 pr-4">Findings</th>
-                <th className="pb-2 pr-4">Duration</th>
-                <th className="pb-2 pr-4">Source</th>
-                <th className="pb-2">Error</th>
+    <section className="border-2 border-slate-700 bg-slate-900 p-5">
+      <h2 className="text-[11px] font-mono font-bold text-cyan-400 uppercase tracking-widest mb-4">
+        Engine Reports
+      </h2>
+      <div className="overflow-x-auto mb-5">
+        <table className="w-full text-[10px] font-mono border-collapse border-2 border-slate-700">
+          <thead>
+            <tr className="border-b border-slate-700/50">
+              <th className="text-left py-3 pr-4 text-slate-500 uppercase">Engine</th>
+              <th className="text-left py-3 pr-4 text-slate-500 uppercase">Status</th>
+              <th className="text-left py-3 pr-4 text-slate-500 uppercase">Findings</th>
+              <th className="text-left py-3 pr-4 text-slate-500 uppercase">Duration</th>
+              <th className="text-left py-3 pr-4 text-slate-500 uppercase">Source</th>
+              <th className="text-left py-3 text-slate-500 uppercase">Error</th>
+            </tr>
+          </thead>
+          <tbody className="text-slate-300">
+            {engineEntries.map((engine) => (
+              <tr key={engine.engine} className="border-b border-slate-700/10 hover:bg-slate-800/30">
+                <td className="py-3 pr-4">{engine.engine}</td>
+                <td className="py-3 pr-4">
+                  <span className={`inline-flex items-center gap-1.5 rounded-none border-2 px-2 py-0.5 font-mono font-bold text-[10px] uppercase ${
+                    engine.status === "ok" ? "border-emerald-500 bg-emerald-900/20 text-emerald-400" :
+                    engine.status === "partial" ? "border-amber-500 bg-amber-900/20 text-amber-400" :
+                    engine.status === "skipped" || engine.status === "unknown" ? "border-slate-700 bg-slate-800 text-slate-400" :
+                    "border-red-500 bg-red-900/20 text-red-400"
+                  }`}>
+                    {engine.status}
+                  </span>
+                </td>
+                <td className="py-3 pr-4">{engine.findings.length}</td>
+                <td className="py-3 pr-4">{formatDuration(engine.duration_ms)}</td>
+                <td className="py-3 pr-4 text-slate-500">{engine.source}</td>
+                <td className="py-3 text-slate-500/70 max-w-xs truncate">{engine.error ?? "—"}</td>
               </tr>
-            </thead>
-            <tbody className="text-slate-300">
-              {engineEntries.map((engine) => (
-                <tr key={engine.engine} className="border-t border-slate-800">
-                  <td className="py-2 pr-4 font-mono text-cyan-400">{engine.engine}</td>
-                  <td className="py-2 pr-4">
-                    <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${engineStatusColor(engine.status)}`}>
-                      {engineStatusLabel(engine.status)}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-4">{engine.findings.length}</td>
-                  <td className="py-2 pr-4 font-mono">{formatDuration(engine.duration_ms)}</td>
-                  <td className="py-2 pr-4 text-xs text-slate-500">{engine.source}</td>
-                  <td className="py-2 text-xs text-slate-500 max-w-xs truncate">{engine.error ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {engineEntries.map((engine) => (
-          <EngineDetail key={engine.engine} engine={engine} />
-        ))}
+            ))}
+          </tbody>
+        </table>
       </div>
+      {engineEntries.map((engine) => (
+        <EngineDetail key={engine.engine} engine={engine} />
+      ))}
     </section>
   );
 }

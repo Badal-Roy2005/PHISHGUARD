@@ -2,52 +2,51 @@
 
 import type { EngineReport } from "@phishguard/contracts";
 
-import { severityColor } from "@/lib/ui-utils";
-
 interface EngineDetailProps {
   engine: EngineReport;
 }
 
 export function EngineDetail({ engine }: EngineDetailProps) {
   return (
-    <details key={engine.engine} className="group mt-4">
-      <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-300 hover:text-slate-100">
-        <span className="text-slate-500 group-open:rotate-90 transition-transform">▸</span>
+    <details key={engine.engine} className="mt-5 border-2 border-slate-700/50 bg-slate-800/50">
+      <summary className="cursor-pointer border-b border-slate-700/30 p-3 font-mono font-bold text-cyan-400">
         {engine.engine} engine details
       </summary>
-      <div className="mt-3 space-y-4">
+      <div className="p-4 space-y-4">
         {engine.findings.length > 0 && (
-          <div>
-            <p className="text-xs uppercase tracking-wider text-slate-500">Findings</p>
-            <ul className="mt-2 space-y-2">
-              {engine.findings
-                .sort((a, b) => {
-                  const SEVERITY_ORDER = ["critical", "high", "medium", "low", "info"] as const;
-                  const sevA = SEVERITY_ORDER.indexOf(a.severity as typeof SEVERITY_ORDER[number]);
-                  const sevB = SEVERITY_ORDER.indexOf(b.severity as typeof SEVERITY_ORDER[number]);
-                  return sevA - sevB;
-                })
-                .map((f, i) => (
-                  <li key={`${engine.engine}-${i}`} className={`rounded-lg border p-3 ${severityColor(f.severity)}`}>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs">{f.id}</span>
-                      <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${severityColor(f.severity)}`}>
-                        {f.severity}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm text-slate-200">{f.title}</p>
-                    {f.detail && <p className="mt-1 text-xs text-slate-400">{f.detail}</p>}
-                    {f.evidence_ref && <p className="mt-1 text-xs text-slate-500">Ref: {f.evidence_ref}</p>}
-                  </li>
-                ))}
+          <>
+            <h3 className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Findings</h3>
+            <ul className="space-y-3">
+              {engine.findings.map((f, i) => (
+                <li key={`${engine.engine}-${i}`} className="border-2 border-slate-700/50 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-mono text-[10px] text-slate-400">{f.id}</span>
+                    <span className={`rounded-none border-2 px-1.5 py-0.5 font-mono font-bold text-[10px] uppercase ${
+                      f.severity === "critical" ? "border-red-500 bg-red-900/20 text-red-400" :
+                      f.severity === "high" ? "border-orange-500 bg-orange-900/20 text-orange-400" :
+                      f.severity === "medium" ? "border-amber-500 bg-amber-900/20 text-amber-400" :
+                      f.severity === "low" ? "border-emerald-500 bg-emerald-900/20 text-emerald-400" :
+                      f.severity === "info" ? "border-cyan-500 bg-cyan-900/20 text-cyan-400" :
+                      "border-slate-700 bg-slate-800 text-slate-400"
+                    }`}>
+                      {f.severity}
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-mono text-slate-300">{f.title}</p>
+                  {f.detail && <p className="mt-1 text-[10px] font-mono text-slate-500/70">{f.detail}</p>}
+                  {f.evidence_ref && (
+                    <p className="mt-1 text-[10px] font-mono text-slate-500/50">Ref: {f.evidence_ref}</p>
+                  )}
+                </li>
+              ))}
             </ul>
-          </div>
+          </>
         )}
         <details className="group">
-          <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-300">
+          <summary className="cursor-pointer text-[10px] font-mono text-slate-500 hover:text-cyan-400 uppercase tracking-widest">
             Evidence (raw)
           </summary>
-          <pre className="mt-2 text-xs text-slate-400 bg-slate-900/40 rounded p-3 overflow-auto max-h-64">
+          <pre className="mt-2 text-[10px] font-mono text-slate-500/70 border-2 border-slate-700/50 bg-slate-950 p-3 overflow-x-auto max-h-64">
             {JSON.stringify(engine.evidence, null, 2)}
           </pre>
         </details>

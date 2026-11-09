@@ -2,69 +2,78 @@
 
 import type { RiskAssessment } from "@phishguard/contracts";
 
-import { bandColor, postureGradeColor } from "@/lib/ui-utils";
+export function RiskScoreCard({ risk, isPartial }: { risk: RiskAssessment; isPartial: boolean }) {
+  const isNull = risk.score === null;
 
-interface RiskScoreCardProps {
-  risk: RiskAssessment;
-  isPartial: boolean;
-}
-
-export function RiskScoreCard({ risk, isPartial }: RiskScoreCardProps) {
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-6">
-      <h2 className="text-sm font-medium uppercase tracking-wider text-slate-400">Risk Assessment</h2>
-      <div className="mt-4 grid gap-6 md:grid-cols-4">
-        <div className="md:col-span-2">
-          <p className="text-xs uppercase tracking-wider text-slate-500">Heuristic Risk Score</p>
-          <div className="mt-2 flex items-baseline gap-4">
-            <span className={`text-5xl font-mono font-semibold ${risk.score === null ? "text-slate-400" : bandColor(risk.band)}`}>
-              {risk.score === null ? "—" : risk.score}
-            </span>
-            <span className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1 font-semibold text-lg ${bandColor(risk.band)}`}>
-              {risk.band}
-            </span>
+    <section className="border-2 border-slate-700 bg-slate-900 p-5">
+      <h2 className="text-[11px] font-mono font-bold text-cyan-400 uppercase tracking-widest mb-4">
+        Risk Assessment
+      </h2>
+      <div className="grid gap-5 md:grid-cols-3">
+        <div className="border-2 border-slate-700/50 p-4 flex flex-col justify-between h-full">
+          <div>
+            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-2">Heuristic Score</p>
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`text-5xl font-mono font-bold text-slate-100 ${isNull ? "text-slate-500" : "text-cyan-400"}`}>
+                {risk.score === null ? "—" : risk.score}
+              </span>
+              <span className={`inline-flex items-center gap-1.5 rounded-none border-2 px-3 py-1 font-mono font-bold text-[10px] uppercase ${isNull ? "border-slate-700 bg-slate-800 text-slate-400" : "border-cyan-400 bg-cyan-400 text-slate-950"}`}>
+                {risk.band}
+              </span>
+            </div>
           </div>
-          {risk.score === null && (
-            <p className="mt-2 text-sm text-slate-400">
-              {risk.confidence.covered_weight < 50
-                ? "Insufficient evidence for a reliable score. Coverage below 50%."
-                : "Score suppressed: evidence coverage below 75% threshold for 'low' band."}
-            </p>
-          )}
-          <p className="mt-3 text-sm text-slate-300">{risk.verdict}</p>
-          {isPartial && (
-            <p className="mt-2 text-xs text-amber-400">Some engines unavailable. Missing evidence is not treated as safe.</p>
-          )}
+          <div>
+            {isNull && (
+              <p className="text-[10px] font-mono text-slate-500 mb-2">
+                Coverage below threshold — score suppressed. Missing evidence is not safe.
+              </p>
+            )}
+            <p className="text-[11px] font-mono text-slate-300">{risk.verdict}</p>
+            {isPartial && (
+              <p className="mt-2 text-[10px] font-mono text-amber-400">
+                Partial coverage — some engines unavailable.
+              </p>
+            )}
+          </div>
         </div>
-        <div className="md:col-span-2 space-y-4">
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-            <p className="text-xs uppercase tracking-wider text-slate-500">Threat Likelihood</p>
-            <div className="mt-2 flex items-baseline gap-4">
-              <span className="text-3xl font-mono font-semibold text-cyan-400">
+        <div className="border-2 border-slate-700/50 p-4 flex flex-col justify-between h-full">
+          <div>
+            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-2">Threat Likelihood</p>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-3xl font-mono font-bold text-cyan-400">
                 {(risk.likelihood.score * 100).toFixed(0)}%
               </span>
-              <span className="text-sm text-slate-400">{risk.likelihood.band}</span>
+              <span className="text-[10px] font-mono text-slate-500">{risk.likelihood.band}</span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">
-              From intel, URL, brand, and redirect evidence. Not ML probability.
+          </div>
+          <div>
+            <p className="mt-1 text-[10px] font-mono text-slate-500/70">
+              From intel, URL, brand, redirect evidence — not ML probability.
             </p>
           </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-            <p className="text-xs uppercase tracking-wider text-slate-500">Security Posture</p>
-            <div className="mt-2 flex items-baseline gap-4">
-              <span className="text-3xl font-mono font-semibold text-cyan-400">
+        </div>
+        <div className="border-2 border-slate-700/50 p-4 flex flex-col justify-between h-full">
+          <div>
+            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-2">Security Posture</p>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-3xl font-mono font-bold text-cyan-400">
                 {risk.posture.score === null ? "—" : risk.posture.score}
               </span>
-              <span className={`text-sm font-semibold ${postureGradeColor(risk.posture.grade)}`}>
+              <span className={`inline-flex items-center gap-1.5 rounded-none border-2 px-3 py-1 font-mono font-bold text-[10px] uppercase border-cyan-400 bg-cyan-400 text-slate-950`}>
                 Grade {risk.posture.grade}
               </span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">
+          </div>
+          <div>
+            <p className="mt-1 text-[10px] font-mono text-slate-500/70">
               Based on TLS and HTTP security configuration.
-              {risk.posture.penalties.length > 0 && (
-                <span className="ml-2">Penalties: {risk.posture.penalties.map((p) => p.id).join(", ")}</span>
-              )}
             </p>
+            {risk.posture.penalties.length > 0 && (
+              <p className="mt-2 text-[10px] font-mono text-red-400">
+                Penalties: {risk.posture.penalties.map((p) => p.id).join(", ")}
+              </p>
+            )}
           </div>
         </div>
       </div>

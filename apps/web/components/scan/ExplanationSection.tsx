@@ -9,28 +9,31 @@ interface ExplanationSectionProps {
 
 export function ExplanationSection({ explanation }: ExplanationSectionProps) {
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-      <h2 className="text-sm font-medium uppercase tracking-wider text-slate-400">Explanation</h2>
-      <p className="mt-2 text-sm text-slate-300">{explanation.summary}</p>
+    <section className="border-2 border-slate-700/50 bg-slate-800/50 p-5">
+      <h2 className="text-[11px] font-mono font-bold text-cyan-400 uppercase tracking-widest mb-4">
+        Explanation
+      </h2>
+      <p className="text-[11px] font-mono text-slate-300 mb-4">{explanation.summary}</p>
       {explanation.top_factors.length > 0 && (
-        <ul className="mt-4 space-y-2">
-          {explanation.top_factors.map((f, i) => (
-            <li key={i} className="flex items-center gap-3 text-sm">
-              <span className="shrink-0 w-6 h-6 flex items-center justify-center rounded bg-slate-800 text-xs font-mono text-cyan-400">
-                {i + 1}
-              </span>
-              <span className="font-mono text-xs text-slate-400">{f.feature}</span>
-              <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${
-                f.direction === "increases_risk" ? "text-orange-300 border-orange-800 bg-orange-950/40" :
-                f.direction === "decreases_risk" ? "text-emerald-300 border-emerald-800 bg-emerald-950/40" :
-                "text-slate-400 border-slate-700 bg-slate-900/40"
-              }`}>
-                {f.contribution && f.contribution > 0 ? `+${f.contribution}` : "0"}
-              </span>
-              <span className="text-slate-500">{f.source}</span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <h3 className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-3">Top Factors</h3>
+          <ul className="space-y-3">
+            {explanation.top_factors.map((f, i) => (
+              <li key={i} className="border-2 border-slate-700/50 p-3 flex items-start gap-3">
+                <span className="shrink-0 inline-flex items-center gap-1 rounded-none border-2 px-2 py-0.5 font-mono font-bold text-[10px] uppercase border-cyan-400 bg-cyan-400 text-slate-950">
+                  #{i + 1}
+                </span>
+                <div className="flex-1">
+                  <p className="font-mono text-[10px] text-slate-500">{f.feature}</p>
+                  <p className="text-[11px] font-mono text-slate-300">{f.source}</p>
+                  <p className="mt-1 text-[10px] font-mono text-slate-500/70">
+                    {f.direction === "increases_risk" ? "increases risk" : f.direction === "decreases_risk" ? "decreases risk" : "informational"}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );
