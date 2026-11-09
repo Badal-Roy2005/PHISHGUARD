@@ -24,7 +24,7 @@ function parseJson(text: string): unknown {
 
 export async function callAnalysis(
   payload: ScanRequest,
-  userId: string,
+  userId: string | null,
   requestId: string,
 ): Promise<AnalysisResult> {
   const baseUrl = process.env.ANALYSIS_API_URL?.trim();

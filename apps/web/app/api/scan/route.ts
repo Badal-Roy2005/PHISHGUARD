@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { createScanResponse } from "@/lib/api/scan";
 import { callAnalysis } from "@/lib/analysis";
-import type { ScanRequest } from "@phishguard/contracts";
+import { createClient } from "@/lib/supabase/server";
 
 const MAX_BODY_BYTES = 16_384;
 
@@ -12,14 +13,20 @@ function invalidJson(): NextResponse {
   );
 }
 
-function isScanRequest(obj: unknown): obj is ScanRequest {
-  return (
-    typeof obj === "object" &&
-    obj !== null &&
-    "url" in obj &&
-    typeof (obj as Record<string, unknown>).url === "string" &&
-    ((obj as Record<string, unknown>).url as string).length > 0
-  );
+/**
+ * Resolve the authenticated user from the verified server-side session.
+ *
+ * `supabase.auth.getUser()` validates the session token with Supabase Auth; it
+ * never trusts a user id from the request body or from a browser-supplied
+ * header. Anonymous callers (no session, or an expired/invalid session) yield
+ * `null`, which the analysis service treats as "do not persist".
+ */
+async function getVerifiedUser(): Promise<{ user: { id: string } | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return { user: user ? { id: user.id } : null };
 }
 
 export async function POST(request: NextRequest) {
@@ -38,20 +45,13 @@ export async function POST(request: NextRequest) {
     return invalidJson();
   }
 
-  if (!isScanRequest(body)) {
-    return NextResponse.json(
-      { error: { code: "invalid_request", message: "Invalid scan request." } },
-      { status: 400 },
-    );
-  }
-
   const requestId = request.headers.get("X-Request-ID") ?? crypto.randomUUID();
 
-  const result = await callAnalysis(
+  const result = await createScanResponse({
     body,
-    "",
-    requestId,
-  );
+    getUser: getVerifiedUser,
+    analyze: (payload, userId) => callAnalysis(payload, userId, requestId),
+  });
 
   return NextResponse.json(result.body, { status: result.status });
 }

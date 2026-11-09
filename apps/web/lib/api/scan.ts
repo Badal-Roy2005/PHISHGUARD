@@ -14,7 +14,7 @@ export type AnalysisResult = ApiResponse;
 export interface CreateScanDependencies {
   body: unknown;
   getUser: () => Promise<{ user: AuthenticatedUser | null }>;
-  analyze: (payload: ScanRequest, userId: string) => Promise<AnalysisResult>;
+  analyze: (payload: ScanRequest, userId: string | null) => Promise<AnalysisResult>;
 }
 
 function error(status: number, code: string, message: string, details?: unknown): ApiResponse {
@@ -42,10 +42,6 @@ export async function createScanResponse({
     return error(503, "upstream_unavailable", "Authentication is temporarily unavailable.");
   }
 
-  if (!user) {
-    return error(401, "unauthorized", "Authentication required.");
-  }
-
   const parsed = validateScanRequest(body);
   if (!parsed.ok) {
     return error(400, "invalid_request", "Request validation failed.", {
@@ -53,8 +49,10 @@ export async function createScanResponse({
     });
   }
 
+  // Scanning is allowed anonymously; only a verified session supplies an owner.
+  // A null user id means the analysis service must not persist the scan.
   try {
-    return await analyze(parsed.value, user.id);
+    return await analyze(parsed.value, user?.id ?? null);
   } catch {
     return error(503, "upstream_unavailable", "Analysis is temporarily unavailable.");
   }

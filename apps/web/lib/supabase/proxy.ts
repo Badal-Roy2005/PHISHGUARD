@@ -4,11 +4,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./database.types.ts";
 
 function isProtectedPath(pathname: string): boolean {
-  return (
-    pathname.startsWith("/account") ||
-    pathname === "/api/scan" ||
-    pathname.startsWith("/api/scans")
-  );
+  // Scan submission (/api/scan) is intentionally public: anonymous scans are
+  // allowed but never persisted. Identity for persistence is resolved inside
+  // the route from the verified Supabase session, never from client input.
+  return pathname.startsWith("/account") || pathname.startsWith("/api/scans");
 }
 
 function isApiPath(pathname: string): boolean {
