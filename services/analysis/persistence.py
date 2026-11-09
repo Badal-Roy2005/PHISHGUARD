@@ -175,7 +175,7 @@ def persist_scan(
     store: ScanStore,
     scan: ScanResult,
     *,
-    user_id: str,
+    user_id: str | None,
     retention_days: int,
 ) -> None:
     store.save(

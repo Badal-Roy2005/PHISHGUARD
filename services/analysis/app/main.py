@@ -153,18 +153,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Persist the assessment server-side using the service role. A
         # persistence failure degrades gracefully: the scan result is still
         # returned to the client and never treated as benign.
-        if x_authenticated_user_id is not None:
-            try:
-                store = build_scan_store(resolved)
-                if store is not None:
-                    persist_scan(
-                        store,
-                        result,
-                        user_id=x_authenticated_user_id,
-                        retention_days=resolved.scan_retention_days,
-                    )
-            except PersistenceError as exc:
-                logger.warning("scan persistence failed: %s", exc)
+        try:
+            store = build_scan_store(resolved)
+            if store is not None:
+                persist_scan(
+                    store,
+                    result,
+                    user_id=x_authenticated_user_id,
+                    retention_days=resolved.scan_retention_days,
+                )
+        except PersistenceError as exc:
+            logger.warning("scan persistence failed: %s", exc)
 
         return JSONResponse(status_code=200, content=result.model_dump(mode="json"))
 
