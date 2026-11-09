@@ -14,9 +14,9 @@ Deadline: **10 November 2026**. M0, M1, M2, M3, M4, M5B, M6 and M7 are complete 
 | M5 | Threat intelligence | M4 | done (M5B) |
 | M6 | TLS, CT, HTTP assessment | M4 | done |
 | M7 | Risk assessment and explainability | M2, M3, M5, M6 | done |
-| M8 | Supabase persistence and auth | M1 | queued (needs hosted project) |
-| M9 | Next.js frontend | M7, M8 | queued |
-| M10 | Chrome extension | M9 | queued |
+| M8 | Supabase persistence and auth | M1 | implemented (runtime verified; pgTAP pending) |
+| M9 | Next.js frontend | M7, M8 | implemented (M9.1 authenticated persistence verified) |
+| M10 | Chrome extension | M9 | implemented |
 | M11 | End-to-end testing | M2–M10 | queued |
 | M12 | Deployment and release | M11 | queued |
 

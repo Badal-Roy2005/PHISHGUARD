@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "PHISHGUARD - Phishing Risk Awareness",
+  "version": "0.1.0",
+  "description": "On-demand phishing risk assessment for the active tab via the PHISHGUARD backend. An aid, not a guarantee of safety.",
+  "minimum_chrome_version": "102",
+  "permissions": ["activeTab"],
+  "host_permissions": ["__API_ORIGIN__/*"],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Assess this page with PHISHGUARD",
+    "default_popup": "popup.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; connect-src __API_ORIGIN__"
+  }
+}

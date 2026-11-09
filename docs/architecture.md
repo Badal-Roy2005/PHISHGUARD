@@ -39,7 +39,8 @@ exist. Database and UI are still planned.
 | `packages/contracts` | JSON Schemas, Pydantic models, TS types and validators, fixtures |
 | `services/analysis` | app factory, env validation, `/health`, `/version`, `/internal/config`, M3 URL engine, M4 scanner, M5B intel adapters, M6 TLS/HTTP/CT assessment, M7 deterministic risk assessment; `/internal/analyze` runs url + transport + intel and returns a policy-versioned risk assessment |
 | `services/ml` | app factory, env validation, `/health`, `/version`, `/internal/config`, M2 model metadata and contract-validated `/predict` |
-| `apps/web` | minimal App Router shell that imports contracts; no scan UI yet |
+| `apps/web` | Next.js application with URL scanning, scan results, scan detail page, account access, and Supabase-backed authenticated scan persistence |
+| `apps/extension` | Manifest V3 extension for on-demand phishing risk assessment of the active tab |
 
 Both services return an explicit "not implemented" response instead of a fabricated
 verdict. That is deliberate: §"unavailable is never safe" applies to development too.

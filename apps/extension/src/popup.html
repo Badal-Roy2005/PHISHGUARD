@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PHISHGUARD assessment</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div>
+        <h1>PHISHGUARD</h1>
+        <p class="tagline">Phishing risk awareness for this tab</p>
+      </div>
+      <span id="cached-badge" class="badge badge-muted" hidden>Cached</span>
+    </header>
+
+    <main>
+      <section class="url-card" aria-labelledby="url-label">
+        <span id="url-label" class="label">Current page</span>
+        <p id="page-url" class="url" dir="ltr">Reading the active tab...</p>
+        <p id="url-note" class="note" hidden></p>
+      </section>
+
+      <div class="actions">
+        <button id="recheck" type="button">Recheck</button>
+        <button id="clear" type="button" class="secondary">Clear cached result</button>
+      </div>
+
+      <p id="notice" class="notice" role="status" aria-live="polite" data-tone="loading">
+        Loading assessment...
+      </p>
+
+      <section id="result" class="result" aria-labelledby="result-heading" hidden>
+        <div class="result-head">
+          <h2 id="result-heading"></h2>
+          <span id="band-badge" class="badge"></span>
+        </div>
+        <p id="score" class="score"></p>
+        <p id="verdict" class="verdict"></p>
+
+        <dl class="meta">
+          <div>
+            <dt>Threat likelihood</dt>
+            <dd id="likelihood"></dd>
+          </div>
+          <div>
+            <dt>Security posture</dt>
+            <dd id="posture"></dd>
+          </div>
+        </dl>
+
+        <h3>What was observed</h3>
+        <ul id="reasons" class="reasons"></ul>
+
+        <div id="missing-section">
+          <h3>Not assessed</h3>
+          <ul id="missing" class="missing"></ul>
+        </div>
+
+        <p id="coverage" class="note"></p>
+      </section>
+
+      <p id="disclaimer" class="disclaimer">
+        This is an assessment aid, not a guarantee of safety. Scores are heuristic, not
+        probabilities.
+      </p>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

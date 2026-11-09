@@ -18,6 +18,18 @@ importers:
         specifier: 8.72.1
         version: 8.72.1(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
 
+  apps/extension:
+    devDependencies:
+      '@phishguard/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@types/node':
+        specifier: 26.6.6
+        version: 26.6.6
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   apps/web:
     dependencies:
       '@phishguard/contracts':
