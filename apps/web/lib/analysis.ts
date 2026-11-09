@@ -40,16 +40,20 @@ export async function callAnalysis(
     return unavailable("Analysis service is not configured.");
   }
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Service-Token": serviceToken,
+    "X-Request-ID": requestId,
+  };
+  if (userId) {
+    headers["X-Authenticated-User-Id"] = userId;
+  }
+
   let response: Response;
   try {
     response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Service-Token": serviceToken,
-        "X-Authenticated-User-Id": userId,
-        "X-Request-ID": requestId,
-      },
+      headers,
       body: JSON.stringify(payload),
       cache: "no-store",
       signal: AbortSignal.timeout(ANALYSIS_TIMEOUT_MS),

@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { callAnalysis } from "@/lib/analysis";
-import { createScanResponse } from "@/lib/api/scan";
-import { createClient } from "@/lib/supabase/server";
+import type { ScanRequest } from "@phishguard/contracts";
 
 const MAX_BODY_BYTES = 16_384;
 
@@ -10,6 +9,16 @@ function invalidJson(): NextResponse {
   return NextResponse.json(
     { error: { code: "invalid_request", message: "Request body must be valid JSON." } },
     { status: 400 },
+  );
+}
+
+function isScanRequest(obj: unknown): obj is ScanRequest {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    "url" in obj &&
+    typeof (obj as Record<string, unknown>).url === "string" &&
+    ((obj as Record<string, unknown>).url as string).length > 0
   );
 }
 
@@ -29,18 +38,20 @@ export async function POST(request: NextRequest) {
     return invalidJson();
   }
 
+  if (!isScanRequest(body)) {
+    return NextResponse.json(
+      { error: { code: "invalid_request", message: "Invalid scan request." } },
+      { status: 400 },
+    );
+  }
+
   const requestId = request.headers.get("X-Request-ID") ?? crypto.randomUUID();
-  const result = await createScanResponse({
+
+  const result = await callAnalysis(
     body,
-    getUser: async () => {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      return { user: user ? { id: user.id } : null };
-    },
-    analyze: (payload, userId) => callAnalysis(payload, userId, requestId),
-  });
+    "",
+    requestId,
+  );
 
   return NextResponse.json(result.body, { status: result.status });
 }

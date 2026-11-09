@@ -17,3 +17,5 @@ export function optionalPublicEnv(name: "NEXT_PUBLIC_SITE_URL"): string | undefi
   const value = process.env[name]?.trim();
   return value || undefined;
 }
+
+const _PUBLIC_ENV_NAMES = PUBLIC_ENV_NAMES;
